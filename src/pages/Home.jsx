@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -6,6 +5,7 @@ import {
   Compass, Home as HomeIcon, Sparkles, ArrowUpRight, Heart,
   Star, BookOpen, UserRound, LogOut, Play, Bell,
   Library as LibraryIcon, ArrowDownUp, SlidersHorizontal,
+  ShieldCheck,
 } from 'lucide-react'
 
 import { supabase } from '../lib/supabase'
@@ -144,6 +144,7 @@ export default function Home() {
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [user, setUser] = useState(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
 
@@ -218,6 +219,38 @@ export default function Home() {
       subscription.unsubscribe()
     }
   }, [])
+
+  // CHECK ADMINISTRATOR PERMISSIONS
+  useEffect(() => {
+    let mounted = true
+
+    const checkAdmin = async () => {
+      setIsAdmin(false)
+
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (error) {
+        console.error('Could not check admin permissions:', error.message)
+        return
+      }
+
+      if (mounted) {
+        setIsAdmin(!!data)
+      }
+    }
+
+    checkAdmin()
+
+    return () => {
+      mounted = false
+    }
+  }, [user])
 
   // LOAD UNREAD NOTIFICATIONS
   useEffect(() => {
@@ -491,6 +524,15 @@ export default function Home() {
                 <LibraryIcon size={16} /> My Library
               </Link>
             )}
+
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="flex items-center gap-2 text-purple-300 transition hover:text-purple-200"
+              >
+                <ShieldCheck size={16} /> Admin
+              </Link>
+            )}
           </nav>
 
           <div className="hidden items-center gap-3 sm:flex">
@@ -605,6 +647,17 @@ export default function Home() {
                   <span className="text-sm font-semibold">My Library</span>
                   <span className="ml-auto text-xs text-purple-400">Open library</span>
                 </Link>
+
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    onClick={() => setMenuOpen(false)}
+                    className="mb-3 flex items-center gap-3 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-3 text-purple-200 transition hover:bg-purple-500/20"
+                  >
+                    <ShieldCheck size={18} />
+                    <span className="text-sm font-semibold">Admin Dashboard</span>
+                  </Link>
+                )}
 
                 <Link to="/profile" onClick={() => setMenuOpen(false)} className="mb-3 flex items-center gap-2 rounded-xl border border-white/10 px-3 py-3 text-gray-300 transition hover:border-purple-500/40 hover:text-purple-200">
                   <UserRound size={18} />
