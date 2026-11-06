@@ -2,29 +2,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Search,
-  Bookmark,
-  Menu,
-  X,
-  ChevronRight,
-  Flame,
-  Clock3,
-  Compass,
-  Home as HomeIcon,
-  Sparkles,
-  ArrowUpRight,
-  Heart,
-  Star,
-  BookOpen,
-  UserRound,
-  LogOut,
-  Play,
-  Library as LibraryIcon,
-  ArrowDownUp,
-  SlidersHorizontal,
+  Search, Bookmark, Menu, X, ChevronRight, Flame, Clock3,
+  Compass, Home as HomeIcon, Sparkles, ArrowUpRight, Heart,
+  Star, BookOpen, UserRound, LogOut, Play, Bell,
+  Library as LibraryIcon, ArrowDownUp, SlidersHorizontal,
 } from 'lucide-react'
 
-import { manga } from '../data/manga'
 import { supabase } from '../lib/supabase'
 
 const genres = ['All', 'Action', 'Fantasy', 'Magic', 'Adventure', 'Drama']
@@ -143,14 +126,16 @@ function MangaCard({ item, index, bookmarks, toggleBookmark }) {
         </div>
       </div>
 
-      <p className="mt-2 text-xs text-gray-500">
-        {item.genre}
-      </p>
+      <p className="mt-2 text-xs text-gray-500">{item.genre}</p>
     </article>
   )
 }
 
 export default function Home() {
+  const [manga, setManga] = useState([])
+  const [loadingManga, setLoadingManga] = useState(true)
+  const [mangaError, setMangaError] = useState('')
+
   const [search, setSearch] = useState('')
   const [activeGenre, setActiveGenre] = useState('All')
   const [sortBy, setSortBy] = useState('rating')
@@ -160,7 +145,53 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [user, setUser] = useState(null)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
+  // LOAD COMICS FROM SUPABASE
+  useEffect(() => {
+    let mounted = true
+
+    const loadManga = async () => {
+      setLoadingManga(true)
+      setMangaError('')
+
+      const { data, error } = await supabase
+        .from('comics')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (!mounted) return
+
+      if (error) {
+        console.error('Could not load comics:', error.message)
+        setMangaError(error.message)
+        setLoadingManga(false)
+        return
+      }
+
+      const formattedManga = (data || []).map((item) => ({
+        ...item,
+        coverImage: item.cover_image,
+        chapters: item.chapters ?? 0,
+        chapter: item.chapter || `Chapter ${item.chapters ?? 0}`,
+        rating: String(item.rating ?? 0),
+        genres: item.genres || [item.genre],
+        colors: item.colors || 'from-violet-950 via-purple-800 to-slate-950',
+        symbol: item.symbol || '✧',
+      }))
+
+      setManga(formattedManga)
+      setLoadingManga(false)
+    }
+
+    loadManga()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  // AUTHENTICATION
   useEffect(() => {
     let mounted = true
 
@@ -188,6 +219,40 @@ export default function Home() {
     }
   }, [])
 
+  // LOAD UNREAD NOTIFICATIONS
+  useEffect(() => {
+    let mounted = true
+
+    const loadUnreadNotifications = async () => {
+      if (!user) {
+        setUnreadCount(0)
+        return
+      }
+
+      const { count, error } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_read', false)
+
+      if (error) {
+        console.error('Could not load notifications:', error.message)
+        return
+      }
+
+      if (mounted) {
+        setUnreadCount(count || 0)
+      }
+    }
+
+    loadUnreadNotifications()
+
+    return () => {
+      mounted = false
+    }
+  }, [user])
+
+  // LOAD BOOKMARKS
   useEffect(() => {
     let mounted = true
 
@@ -219,11 +284,12 @@ export default function Home() {
     }
   }, [user])
 
+  // LOAD READING HISTORY
   useEffect(() => {
     let mounted = true
 
     const loadReadingHistory = async () => {
-      if (!user) {
+      if (!user || loadingManga) {
         setReadingHistory([])
         setLoadingHistory(false)
         return
@@ -240,10 +306,7 @@ export default function Home() {
       if (error) {
         console.error('Could not load reading history:', error.message)
 
-        if (mounted) {
-          setLoadingHistory(false)
-        }
-
+        if (mounted) setLoadingHistory(false)
         return
       }
 
@@ -274,7 +337,7 @@ export default function Home() {
     return () => {
       mounted = false
     }
-  }, [user])
+  }, [user, manga, loadingManga])
 
   const handleLogout = async () => {
     setLoggingOut(true)
@@ -297,6 +360,7 @@ export default function Home() {
     user?.email?.split('@')[0] ||
     'Reader'
 
+  // BOOKMARK HANDLER
   const toggleBookmark = async (id) => {
     if (!user) {
       alert('Please sign in to save your favourite manga.')
@@ -339,6 +403,7 @@ export default function Home() {
     }
   }
 
+  // SEARCH AND FILTER
   const filteredManga = useMemo(() => {
     const searchTerm = search.trim().toLowerCase()
 
@@ -376,7 +441,7 @@ export default function Home() {
 
       return 0
     })
-  }, [search, activeGenre, sortBy])
+  }, [manga, search, activeGenre, sortBy])
 
   const clearFilters = () => {
     setSearch('')
@@ -406,32 +471,24 @@ export default function Home() {
 
           <nav className="hidden items-center gap-8 text-sm text-gray-400 md:flex">
             <Link to="/" className="flex items-center gap-2 text-white transition hover:text-purple-300">
-              <HomeIcon size={16} />
-              Home
+              <HomeIcon size={16} /> Home
             </Link>
 
             <a href="#trending" className="flex items-center gap-2 transition hover:text-purple-400">
-              <Flame size={16} />
-              Trending
+              <Flame size={16} /> Trending
             </a>
 
             <a href="#latest" className="flex items-center gap-2 transition hover:text-purple-400">
-              <Clock3 size={16} />
-              Latest
+              <Clock3 size={16} /> Latest
             </a>
 
             <a href="#explore" className="flex items-center gap-2 transition hover:text-purple-400">
-              <Compass size={16} />
-              Explore
+              <Compass size={16} /> Explore
             </a>
 
             {user && (
-              <Link
-                to="/library"
-                className="flex items-center gap-2 text-purple-300 transition hover:text-purple-200"
-              >
-                <LibraryIcon size={16} />
-                My Library
+              <Link to="/library" className="flex items-center gap-2 text-purple-300 transition hover:text-purple-200">
+                <LibraryIcon size={16} /> My Library
               </Link>
             )}
           </nav>
@@ -455,11 +512,7 @@ export default function Home() {
               />
 
               {search && (
-                <button
-                  onClick={() => setSearch('')}
-                  aria-label="Clear search"
-                  className="text-gray-500 transition hover:text-white"
-                >
+                <button onClick={() => setSearch('')} aria-label="Clear search">
                   <X size={15} />
                 </button>
               )}
@@ -468,58 +521,50 @@ export default function Home() {
             {user ? (
               <>
                 <Link
-                  to="/library"
-                  title="Open your library"
-                  className="flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-sm font-semibold text-purple-200 transition hover:border-purple-400 hover:bg-purple-500/20"
+                  to="/notifications"
+                  title="Notifications"
+                  aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
+                  className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 transition hover:border-purple-400 hover:bg-purple-500/10"
                 >
-                  <LibraryIcon size={17} />
-                  Library
+                  <Bell size={19} className="text-purple-300" />
+
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
                 </Link>
 
-                <Link
-                  to="/profile"
-                  title="Open your profile"
-                  className="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 transition hover:border-purple-400 hover:bg-purple-500/10"
-                >
+                <Link to="/library" title="Open your library" className="flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-sm font-semibold text-purple-200 transition hover:border-purple-400 hover:bg-purple-500/20">
+                  <LibraryIcon size={17} /> Library
+                </Link>
+
+                <Link to="/profile" title="Open your profile" className="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 transition hover:border-purple-400 hover:bg-purple-500/10">
                   <UserRound size={17} className="text-purple-300" />
                   <span className="max-w-28 truncate text-sm font-semibold text-purple-200">
                     {username}
                   </span>
                 </Link>
 
-                <button
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                  className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold transition hover:border-red-500/50 hover:text-red-300 disabled:opacity-50"
-                >
+                <button onClick={handleLogout} disabled={loggingOut} className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold transition hover:border-red-500/50 hover:text-red-300 disabled:opacity-50">
                   <LogOut size={16} />
                   {loggingOut ? 'Logging out...' : 'Logout'}
                 </button>
               </>
             ) : (
               <>
-                <Link
-                  to="/login"
-                  className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold transition hover:border-purple-500 hover:text-purple-300"
-                >
+                <Link to="/login" className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold transition hover:border-purple-500 hover:text-purple-300">
                   Sign in
                 </Link>
 
-                <Link
-                  to="/register"
-                  className="rounded-xl bg-purple-600 px-4 py-2 text-sm font-bold transition hover:bg-purple-500"
-                >
+                <Link to="/register" className="rounded-xl bg-purple-600 px-4 py-2 text-sm font-bold transition hover:bg-purple-500">
                   Register
                 </Link>
               </>
             )}
           </div>
 
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="rounded-lg border border-white/10 p-2 transition hover:bg-white/10 md:hidden"
-            aria-label="Toggle navigation"
-          >
+          <button onClick={() => setMenuOpen(!menuOpen)} className="rounded-lg border border-white/10 p-2 transition hover:bg-white/10 md:hidden" aria-label="Toggle navigation">
             {menuOpen ? <X size={21} /> : <Menu size={21} />}
           </button>
         </div>
@@ -527,110 +572,55 @@ export default function Home() {
         {/* MOBILE MENU */}
         {menuOpen && (
           <div className="border-t border-white/10 bg-[#111019] p-5 md:hidden">
-
             <div className="mb-4 flex items-center gap-2 rounded-xl border border-white/10 px-3 py-3">
               <Search size={18} className="text-gray-500" />
-
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search stories..."
-                className="w-full bg-transparent text-sm outline-none"
-              />
-
-              {search && (
-                <button onClick={() => setSearch('')} aria-label="Clear search">
-                  <X size={16} />
-                </button>
-              )}
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search stories..." className="w-full bg-transparent text-sm outline-none" />
+              {search && <button onClick={() => setSearch('')} aria-label="Clear search"><X size={16} /></button>}
             </div>
 
-            <Link
-              to="/"
-              onClick={() => setMenuOpen(false)}
-              className="block border-b border-white/[0.06] py-3 text-gray-300 transition hover:text-purple-300"
-            >
-              Home
-            </Link>
-
-            <a
-              href="#trending"
-              onClick={() => setMenuOpen(false)}
-              className="block border-b border-white/[0.06] py-3 text-gray-300 transition hover:text-purple-300"
-            >
-              Trending
-            </a>
-
-            <a
-              href="#latest"
-              onClick={() => setMenuOpen(false)}
-              className="block border-b border-white/[0.06] py-3 text-gray-300 transition hover:text-purple-300"
-            >
-              Latest
-            </a>
-
-            <a
-              href="#explore"
-              onClick={() => setMenuOpen(false)}
-              className="block border-b border-white/[0.06] py-3 text-gray-300 transition hover:text-purple-300"
-            >
-              Explore
-            </a>
+            <Link to="/" onClick={() => setMenuOpen(false)} className="block border-b border-white/[0.06] py-3 text-gray-300 transition hover:text-purple-300">Home</Link>
+            <a href="#trending" onClick={() => setMenuOpen(false)} className="block border-b border-white/[0.06] py-3 text-gray-300 transition hover:text-purple-300">Trending</a>
+            <a href="#latest" onClick={() => setMenuOpen(false)} className="block border-b border-white/[0.06] py-3 text-gray-300 transition hover:text-purple-300">Latest</a>
+            <a href="#explore" onClick={() => setMenuOpen(false)} className="block border-b border-white/[0.06] py-3 text-gray-300 transition hover:text-purple-300">Explore</a>
 
             {user ? (
               <div className="mt-4">
                 <Link
-                  to="/library"
+                  to="/notifications"
                   onClick={() => setMenuOpen(false)}
-                  className="mb-3 flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-3 text-purple-200 transition hover:bg-purple-500/20"
+                  className="mb-3 flex items-center gap-3 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-3 text-purple-200 transition hover:bg-purple-500/20"
                 >
+                  <Bell size={18} />
+                  <span className="text-sm font-semibold">Notifications</span>
+
+                  {unreadCount > 0 && (
+                    <span className="ml-auto rounded-full bg-red-500 px-2 py-1 text-[10px] font-bold text-white">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
+
+                <Link to="/library" onClick={() => setMenuOpen(false)} className="mb-3 flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-3 text-purple-200 transition hover:bg-purple-500/20">
                   <LibraryIcon size={18} />
                   <span className="text-sm font-semibold">My Library</span>
-                  <span className="ml-auto text-xs text-purple-400">
-                    Open library
-                  </span>
+                  <span className="ml-auto text-xs text-purple-400">Open library</span>
                 </Link>
 
-                <Link
-                  to="/profile"
-                  onClick={() => setMenuOpen(false)}
-                  className="mb-3 flex items-center gap-2 rounded-xl border border-white/10 px-3 py-3 text-gray-300 transition hover:border-purple-500/40 hover:text-purple-200"
-                >
+                <Link to="/profile" onClick={() => setMenuOpen(false)} className="mb-3 flex items-center gap-2 rounded-xl border border-white/10 px-3 py-3 text-gray-300 transition hover:border-purple-500/40 hover:text-purple-200">
                   <UserRound size={18} />
-                  <span className="truncate text-sm font-semibold">
-                    {username}
-                  </span>
-                  <span className="ml-auto text-xs text-gray-500">
-                    View profile
-                  </span>
+                  <span className="truncate text-sm font-semibold">{username}</span>
+                  <span className="ml-auto text-xs text-gray-500">View profile</span>
                 </Link>
 
-                <button
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 px-4 py-3 text-sm font-semibold text-red-300 hover:bg-red-500/10 disabled:opacity-50"
-                >
+                <button onClick={handleLogout} disabled={loggingOut} className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 px-4 py-3 text-sm font-semibold text-red-300 hover:bg-red-500/10 disabled:opacity-50">
                   <LogOut size={17} />
                   {loggingOut ? 'Logging out...' : 'Logout'}
                 </button>
               </div>
             ) : (
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <Link
-                  to="/login"
-                  onClick={() => setMenuOpen(false)}
-                  className="rounded-xl border border-white/10 px-4 py-3 text-center text-sm font-semibold hover:border-purple-500"
-                >
-                  Sign in
-                </Link>
-
-                <Link
-                  to="/register"
-                  onClick={() => setMenuOpen(false)}
-                  className="rounded-xl bg-purple-600 px-4 py-3 text-center text-sm font-bold hover:bg-purple-500"
-                >
-                  Register
-                </Link>
+                <Link to="/login" onClick={() => setMenuOpen(false)} className="rounded-xl border border-white/10 px-4 py-3 text-center text-sm font-semibold hover:border-purple-500">Sign in</Link>
+                <Link to="/register" onClick={() => setMenuOpen(false)} className="rounded-xl bg-purple-600 px-4 py-3 text-center text-sm font-bold hover:bg-purple-500">Register</Link>
               </div>
             )}
           </div>
@@ -641,7 +631,6 @@ export default function Home() {
 
         {/* HERO */}
         <section className="relative mt-8 overflow-hidden rounded-[28px] border border-purple-500/20 bg-gradient-to-br from-[#251345] via-[#171127] to-[#0e0d15] px-7 py-14 shadow-2xl shadow-purple-950/10 md:px-14 md:py-20">
-
           <div className="pointer-events-none absolute -right-20 -top-32 h-96 w-96 rounded-full bg-purple-600/20 blur-[100px]" />
           <div className="pointer-events-none absolute -bottom-40 right-1/4 h-80 w-80 rounded-full bg-fuchsia-600/10 blur-[100px]" />
 
@@ -665,18 +654,11 @@ export default function Home() {
             </p>
 
             <div className="mt-9 flex flex-wrap gap-3">
-              <a
-                href="#explore"
-                className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-6 py-3.5 text-sm font-bold shadow-lg shadow-purple-950/30 transition hover:-translate-y-1 hover:bg-purple-500"
-              >
-                Explore library
-                <ArrowUpRight size={17} />
+              <a href="#explore" className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-6 py-3.5 text-sm font-bold shadow-lg shadow-purple-950/30 transition hover:-translate-y-1 hover:bg-purple-500">
+                Explore library <ArrowUpRight size={17} />
               </a>
 
-              <a
-                href="#trending"
-                className="rounded-xl border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-semibold transition hover:bg-white/10"
-              >
+              <a href="#trending" className="rounded-xl border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-semibold transition hover:bg-white/10">
                 Discover trending
               </a>
             </div>
@@ -695,25 +677,14 @@ export default function Home() {
             <div className="mb-6 flex items-end justify-between gap-4">
               <div>
                 <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-purple-400">
-                  <BookOpen size={15} />
-                  Pick up where you left off
+                  <BookOpen size={15} /> Pick up where you left off
                 </div>
-
-                <h2 className="text-2xl font-extrabold sm:text-3xl">
-                  Continue reading
-                </h2>
-
-                <p className="mt-2 text-sm text-gray-500">
-                  Your latest reading progress, saved automatically.
-                </p>
+                <h2 className="text-2xl font-extrabold sm:text-3xl">Continue reading</h2>
+                <p className="mt-2 text-sm text-gray-500">Your latest reading progress, saved automatically.</p>
               </div>
 
-              <Link
-                to="/library"
-                className="hidden items-center gap-2 text-sm font-semibold text-purple-300 transition hover:text-purple-200 sm:flex"
-              >
-                View all
-                <ChevronRight size={16} />
+              <Link to="/library" className="hidden items-center gap-2 text-sm font-semibold text-purple-300 transition hover:text-purple-200 sm:flex">
+                View all <ChevronRight size={16} />
               </Link>
             </div>
 
@@ -724,55 +695,24 @@ export default function Home() {
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {readingHistory.map((item) => (
-                  <article
-                    key={item.id}
-                    className="group flex min-w-0 gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 transition hover:border-purple-500/40 hover:bg-purple-500/[0.04]"
-                  >
-                    <Link
-                      to={`/manga/${item.id}`}
-                      className={`relative flex h-32 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${item.colors}`}
-                    >
+                  <article key={item.id} className="group flex min-w-0 gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 transition hover:border-purple-500/40 hover:bg-purple-500/[0.04]">
+                    <Link to={`/manga/${item.id}`} className={`relative flex h-32 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${item.colors}`}>
                       {item.coverImage ? (
-                        <img
-                          src={item.coverImage}
-                          alt={`${item.title} cover`}
-                          loading="lazy"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                          }}
-                          className="absolute inset-0 h-full w-full object-cover"
-                        />
+                        <img src={item.coverImage} alt={`${item.title} cover`} loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} className="absolute inset-0 h-full w-full object-cover" />
                       ) : (
-                        <span className="text-4xl text-white/70">
-                          {item.symbol}
-                        </span>
+                        <span className="text-4xl text-white/70">{item.symbol}</span>
                       )}
                     </Link>
 
                     <div className="flex min-w-0 flex-1 flex-col justify-between">
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400">
-                          {item.genre}
-                        </p>
-
-                        <Link
-                          to={`/manga/${item.id}`}
-                          className="mt-1 line-clamp-2 text-sm font-bold transition group-hover:text-purple-300"
-                        >
-                          {item.title}
-                        </Link>
-
-                        <p className="mt-2 text-xs text-gray-400">
-                          Last read: Chapter {item.lastReadChapter}
-                        </p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400">{item.genre}</p>
+                        <Link to={`/manga/${item.id}`} className="mt-1 line-clamp-2 text-sm font-bold transition group-hover:text-purple-300">{item.title}</Link>
+                        <p className="mt-2 text-xs text-gray-400">Last read: Chapter {item.lastReadChapter}</p>
                       </div>
 
-                      <Link
-                        to={`/manga/${item.id}/chapter/${item.lastReadChapter}`}
-                        className="mt-3 inline-flex w-fit items-center gap-2 rounded-lg bg-purple-600 px-3 py-2 text-xs font-bold transition hover:bg-purple-500"
-                      >
-                        <Play size={13} fill="currentColor" />
-                        Continue
+                      <Link to={`/manga/${item.id}/chapter/${item.lastReadChapter}`} className="mt-3 inline-flex w-fit items-center gap-2 rounded-lg bg-purple-600 px-3 py-2 text-xs font-bold transition hover:bg-purple-500">
+                        <Play size={13} fill="currentColor" /> Continue
                       </Link>
                     </div>
                   </article>
@@ -790,10 +730,7 @@ export default function Home() {
             [Heart, 'Save', 'Your favourites'],
             [BookOpen, 'Enjoy', 'Your next read'],
           ].map(([Icon, heading, sub]) => (
-            <div
-              key={heading}
-              className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4 transition hover:border-purple-500/30 hover:bg-purple-500/[0.04]"
-            >
+            <div key={heading} className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4 transition hover:border-purple-500/30 hover:bg-purple-500/[0.04]">
               <Icon size={19} className="mb-3 text-purple-400" />
               <p className="font-bold text-white">{heading}</p>
               <p className="mt-1 text-xs text-gray-500">{sub}</p>
@@ -806,29 +743,14 @@ export default function Home() {
           <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
             <div>
               <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-purple-400">
-                <Sparkles size={15} />
-                Find your favourite world
+                <Sparkles size={15} /> Find your favourite world
               </div>
-
-              <h2 className="text-2xl font-extrabold sm:text-3xl">
-                Explore by genre
-              </h2>
-
-              <p className="mt-2 text-sm text-gray-500">
-                Pick a genre and discover your next obsession.
-              </p>
+              <h2 className="text-2xl font-extrabold sm:text-3xl">Explore by genre</h2>
+              <p className="mt-2 text-sm text-gray-500">Pick a genre and discover your next obsession.</p>
             </div>
 
-            <Link
-              to="/"
-              onClick={() => {
-                setActiveGenre('All')
-                setSearch('')
-              }}
-              className="flex items-center gap-1 text-sm font-semibold text-purple-300 transition hover:text-purple-200"
-            >
-              View all manga
-              <ArrowUpRight size={16} />
+            <Link to="/" onClick={() => { setActiveGenre('All'); setSearch('') }} className="flex items-center gap-1 text-sm font-semibold text-purple-300 transition hover:text-purple-200">
+              View all manga <ArrowUpRight size={16} />
             </Link>
           </div>
 
@@ -838,19 +760,13 @@ export default function Home() {
 
               const count = manga.filter((item) =>
                 (item.genres || [item.genre]).some(
-                  (itemGenre) =>
-                    itemGenre.toLowerCase() === genre.name.toLowerCase()
+                  (itemGenre) => itemGenre.toLowerCase() === genre.name.toLowerCase()
                 )
               ).length
 
               return (
-                <Link
-                  key={genre.name}
-                  to={`/genre/${genre.name.toLowerCase()}`}
-                  className={`group relative min-h-48 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111019] p-5 shadow-lg shadow-black/10 transition duration-300 hover:-translate-y-1 hover:border-white/20 hover:shadow-2xl ${genre.glow}`}
-                >
+                <Link key={genre.name} to={`/genre/${genre.name.toLowerCase()}`} className={`group relative min-h-48 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111019] p-5 shadow-lg shadow-black/10 transition duration-300 hover:-translate-y-1 hover:border-white/20 hover:shadow-2xl ${genre.glow}`}>
                   <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${genre.gradient} opacity-80 transition duration-300 group-hover:opacity-100`} />
-
                   <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/[0.03] blur-2xl transition duration-500 group-hover:scale-150" />
 
                   <div className="relative z-10 flex h-full flex-col">
@@ -858,29 +774,15 @@ export default function Home() {
                       <div className={`flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-black/20 ${genre.iconColor}`}>
                         <Icon size={22} />
                       </div>
-
-                      <ArrowUpRight
-                        size={18}
-                        className="text-gray-500 transition duration-300 group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:text-white"
-                      />
+                      <ArrowUpRight size={18} className="text-gray-500 transition duration-300 group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:text-white" />
                     </div>
 
-                    <h3 className="text-lg font-extrabold tracking-tight">
-                      {genre.name}
-                    </h3>
-
-                    <p className="mt-2 min-h-10 text-xs leading-5 text-gray-400">
-                      {genre.description}
-                    </p>
+                    <h3 className="text-lg font-extrabold tracking-tight">{genre.name}</h3>
+                    <p className="mt-2 min-h-10 text-xs leading-5 text-gray-400">{genre.description}</p>
 
                     <div className="mt-auto flex items-center gap-2 pt-4">
-                      <span className={`text-sm font-bold ${genre.iconColor}`}>
-                        {count}
-                      </span>
-
-                      <span className="text-[11px] text-gray-500">
-                        {count === 1 ? 'manga available' : 'manga available'}
-                      </span>
+                      <span className={`text-sm font-bold ${genre.iconColor}`}>{count}</span>
+                      <span className="text-[11px] text-gray-500">manga available</span>
                     </div>
                   </div>
                 </Link>
@@ -893,124 +795,63 @@ export default function Home() {
         <section id="trending" className="mt-14 scroll-mt-28">
           <div className="mb-7">
             <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-purple-400">
-              <Flame size={15} />
-              Popular right now
+              <Flame size={15} /> Popular right now
             </div>
-
-            <h2 className="text-2xl font-extrabold sm:text-3xl">
-              Trending stories
-            </h2>
-
-            <p className="mt-2 text-sm text-gray-500">
-              Discover stories worth adding to your reading list.
-            </p>
+            <h2 className="text-2xl font-extrabold sm:text-3xl">Trending stories</h2>
+            <p className="mt-2 text-sm text-gray-500">Discover stories worth adding to your reading list.</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            {[...manga]
-              .sort((a, b) => Number(b.rating) - Number(a.rating))
-              .map((item, index) => (
-                <MangaCard
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  bookmarks={bookmarks}
-                  toggleBookmark={toggleBookmark}
-                />
+          {loadingManga ? (
+            <p className="rounded-2xl border border-white/10 p-8 text-center text-sm text-gray-400">Loading comics from ABYSSORA...</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+              {[...manga].sort((a, b) => Number(b.rating) - Number(a.rating)).map((item, index) => (
+                <MangaCard key={item.id} item={item} index={index} bookmarks={bookmarks} toggleBookmark={toggleBookmark} />
               ))}
-          </div>
+            </div>
+          )}
         </section>
 
         {/* EXPLORE */}
         <section id="explore" className="mt-16 scroll-mt-28">
           <div className="mb-7">
             <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-purple-400">
-              <Compass size={15} />
-              Find your next read
+              <Compass size={15} /> Find your next read
             </div>
-
-            <h2 className="text-2xl font-extrabold sm:text-3xl">
-              Explore the library
-            </h2>
-
-            <p className="mt-2 text-sm text-gray-500">
-              Find something that matches your mood.
-            </p>
+            <h2 className="text-2xl font-extrabold sm:text-3xl">Explore the library</h2>
+            <p className="mt-2 text-sm text-gray-500">Find something that matches your mood.</p>
           </div>
 
-          {/* SEARCH AND SORT */}
           <div className="mb-5 grid gap-3 sm:grid-cols-[1fr_auto]">
             <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 transition focus-within:border-purple-500/60">
               <Search size={19} className="shrink-0 text-gray-500" />
-
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by manga title or genre..."
-                className="w-full bg-transparent text-sm outline-none placeholder:text-gray-600"
-              />
-
-              {search && (
-                <button
-                  onClick={() => setSearch('')}
-                  aria-label="Clear search"
-                  className="text-gray-500 transition hover:text-white"
-                >
-                  <X size={17} />
-                </button>
-              )}
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by manga title or genre..." className="w-full bg-transparent text-sm outline-none placeholder:text-gray-600" />
+              {search && <button onClick={() => setSearch('')} aria-label="Clear search" className="text-gray-500 transition hover:text-white"><X size={17} /></button>}
             </div>
 
             <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
               <ArrowDownUp size={17} className="shrink-0 text-purple-400" />
-
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                aria-label="Sort manga"
-                className="w-full cursor-pointer bg-transparent text-sm text-gray-300 outline-none sm:w-44"
-              >
-                <option value="rating" className="bg-[#171322]">
-                  Highest rated
-                </option>
-                <option value="latest" className="bg-[#171322]">
-                  Latest
-                </option>
-                <option value="title" className="bg-[#171322]">
-                  Title: A–Z
-                </option>
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sort manga" className="w-full cursor-pointer bg-transparent text-sm text-gray-300 outline-none sm:w-44">
+                <option value="rating" className="bg-[#171322]">Highest rated</option>
+                <option value="latest" className="bg-[#171322]">Latest</option>
+                <option value="title" className="bg-[#171322]">Title: A–Z</option>
               </select>
             </div>
           </div>
 
-          {/* GENRE FILTERS */}
           <div className="mb-6">
             <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-              <SlidersHorizontal size={14} />
-              Filter by genre
+              <SlidersHorizontal size={14} /> Filter by genre
             </div>
 
             <div className="flex flex-wrap gap-2">
               {genres.map((genre) => (
                 genre === 'All' ? (
-                  <button
-                    key={genre}
-                    onClick={() => setActiveGenre('All')}
-                    aria-pressed={activeGenre === 'All'}
-                    className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
-                      activeGenre === 'All'
-                        ? 'border-purple-500 bg-purple-600 text-white shadow-lg shadow-purple-950/30'
-                        : 'border-white/10 bg-white/[0.03] text-gray-400 hover:border-purple-400/50 hover:text-white'
-                    }`}
-                  >
+                  <button key={genre} onClick={() => setActiveGenre('All')} aria-pressed={activeGenre === 'All'} className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${activeGenre === 'All' ? 'border-purple-500 bg-purple-600 text-white shadow-lg shadow-purple-950/30' : 'border-white/10 bg-white/[0.03] text-gray-400 hover:border-purple-400/50 hover:text-white'}`}>
                     All
                   </button>
                 ) : (
-                  <Link
-                    key={genre}
-                    to={`/genre/${genre.toLowerCase()}`}
-                    className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-semibold text-gray-400 transition hover:border-purple-400/50 hover:bg-purple-600 hover:text-white"
-                  >
+                  <Link key={genre} to={`/genre/${genre.toLowerCase()}`} className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-semibold text-gray-400 transition hover:border-purple-400/50 hover:bg-purple-600 hover:text-white">
                     {genre}
                   </Link>
                 )
@@ -1018,60 +859,40 @@ export default function Home() {
             </div>
           </div>
 
-          {/* RESULTS COUNT */}
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] pb-4">
             <p className="text-sm text-gray-400">
-              Showing{' '}
-              <span className="font-bold text-white">
-                {filteredManga.length}
-              </span>{' '}
-              of{' '}
-              <span className="font-bold text-white">
-                {manga.length}
-              </span>{' '}
-              manga
+              Showing <span className="font-bold text-white">{filteredManga.length}</span> of <span className="font-bold text-white">{manga.length}</span> manga
             </p>
 
             {hasActiveFilters && (
-              <button
-                onClick={clearFilters}
-                className="flex items-center gap-2 text-xs font-semibold text-purple-300 transition hover:text-purple-200"
-              >
-                <X size={14} />
-                Clear filters
+              <button onClick={clearFilters} className="flex items-center gap-2 text-xs font-semibold text-purple-300 transition hover:text-purple-200">
+                <X size={14} /> Clear filters
               </button>
             )}
           </div>
 
-          {/* SEARCH RESULTS */}
-          {filteredManga.length === 0 ? (
+          {loadingManga ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-12 text-center text-sm text-gray-400">
+              Loading your library...
+            </div>
+          ) : mangaError ? (
+            <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-8 text-center">
+              <p className="font-semibold text-red-300">Unable to load comics</p>
+              <p className="mt-2 break-words text-sm text-gray-400">{mangaError}</p>
+            </div>
+          ) : filteredManga.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-12 text-center">
               <Search size={30} className="mx-auto text-gray-600" />
-
-              <p className="mt-4 font-semibold text-gray-300">
-                No stories found.
-              </p>
-
-              <p className="mt-2 text-sm text-gray-500">
-                We couldn't find a manga matching your search. Try another title or genre.
-              </p>
-
-              <button
-                onClick={clearFilters}
-                className="mt-5 rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-semibold transition hover:bg-purple-500"
-              >
+              <p className="mt-4 font-semibold text-gray-300">No stories found.</p>
+              <p className="mt-2 text-sm text-gray-500">We couldn't find a manga matching your search. Try another title or genre.</p>
+              <button onClick={clearFilters} className="mt-5 rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-semibold transition hover:bg-purple-500">
                 Clear filters
               </button>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
               {filteredManga.map((item) => (
-                <MangaCard
-                  key={item.id}
-                  item={item}
-                  bookmarks={bookmarks}
-                  toggleBookmark={toggleBookmark}
-                />
+                <MangaCard key={item.id} item={item} bookmarks={bookmarks} toggleBookmark={toggleBookmark} />
               ))}
             </div>
           )}
@@ -1081,13 +902,9 @@ export default function Home() {
         <section id="latest" className="mt-16 scroll-mt-28">
           <div className="mb-7">
             <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-purple-400">
-              <Clock3 size={15} />
-              Freshly updated
+              <Clock3 size={15} /> Freshly updated
             </div>
-
-            <h2 className="text-2xl font-extrabold sm:text-3xl">
-              Latest updates
-            </h2>
+            <h2 className="text-2xl font-extrabold sm:text-3xl">Latest updates</h2>
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
@@ -1095,49 +912,20 @@ export default function Home() {
               .sort((a, b) => Number(b.chapters) - Number(a.chapters))
               .slice(0, 5)
               .map((item, index, list) => (
-                <Link
-                  key={item.id}
-                  to={`/manga/${item.id}`}
-                  className={`group flex items-center gap-4 p-4 transition hover:bg-purple-500/[0.05] ${
-                    index !== list.length - 1
-                      ? 'border-b border-white/[0.06]'
-                      : ''
-                  }`}
-                >
+                <Link key={item.id} to={`/manga/${item.id}`} className={`group flex items-center gap-4 p-4 transition hover:bg-purple-500/[0.05] ${index !== list.length - 1 ? 'border-b border-white/[0.06]' : ''}`}>
                   <div className={`relative flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br ${item.colors}`}>
-                    <img
-                      src={item.coverImage}
-                      alt=""
-                      loading="lazy"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                      }}
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-
-                    <span className="text-xl text-white/80">
-                      {item.symbol}
-                    </span>
+                    <img src={item.coverImage} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} className="absolute inset-0 h-full w-full object-cover" />
+                    <span className="text-xl text-white/80">{item.symbol}</span>
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-sm font-bold transition group-hover:text-purple-300">
-                      {item.title}
-                    </h3>
-
-                    <p className="mt-1 text-xs text-gray-500">
-                      {item.genre}
-                    </p>
+                    <h3 className="truncate text-sm font-bold transition group-hover:text-purple-300">{item.title}</h3>
+                    <p className="mt-1 text-xs text-gray-500">{item.genre}</p>
                   </div>
 
                   <div className="text-right">
-                    <p className="text-xs font-semibold text-purple-300">
-                      {item.chapter}
-                    </p>
-
-                    <p className="mt-1 text-[10px] text-gray-500">
-                      Demo update
-                    </p>
+                    <p className="text-xs font-semibold text-purple-300">{item.chapter}</p>
+                    <p className="mt-1 text-[10px] text-gray-500">Latest chapter</p>
                   </div>
 
                   <ChevronRight size={17} className="shrink-0 text-gray-600 transition group-hover:translate-x-1 group-hover:text-purple-400" />
@@ -1154,10 +942,7 @@ export default function Home() {
             <div className="text-lg font-black tracking-[0.15em]">
               ABYSS<span className="text-purple-400">ORA</span>
             </div>
-
-            <p className="mt-1 text-xs text-gray-600">
-              A universe of stories awaits.
-            </p>
+            <p className="mt-1 text-xs text-gray-600">A universe of stories awaits.</p>
           </div>
 
           <p className="text-xs text-gray-600">

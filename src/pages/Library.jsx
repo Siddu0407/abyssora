@@ -11,10 +11,25 @@ import {
   Sparkles,
   Library as LibraryIcon,
   LoaderCircle,
+  AlertCircle,
 } from 'lucide-react'
 
 import { supabase } from '../lib/supabase'
-import { manga } from '../data/manga'
+
+function formatComic(comic) {
+  return {
+    ...comic,
+    coverImage: comic.cover_image || '',
+    genre: Array.isArray(comic.genres)
+      ? comic.genres.join(', ')
+      : comic.genre || 'Uncategorized',
+    colors:
+      comic.colors || 'from-purple-950 via-purple-900 to-black',
+    symbol: comic.symbol || '◇',
+    status: comic.status || 'Ongoing',
+    chapter: comic.chapter || 'Chapter 1',
+  }
+}
 
 export default function Library() {
   const navigate = useNavigate()
@@ -51,6 +66,7 @@ export default function Library() {
 
         setUser(currentUser)
 
+        // Load bookmarks and reading history.
         const [bookmarkResult, historyResult] = await Promise.all([
           supabase
             .from('bookmarks')
@@ -68,23 +84,60 @@ export default function Library() {
         if (bookmarkResult.error) throw bookmarkResult.error
         if (historyResult.error) throw historyResult.error
 
+        const bookmarkRecords = bookmarkResult.data || []
+        const historyRecords = historyResult.data || []
+
+        // Collect every comic ID used by either list.
+        const comicIds = [
+          ...new Set([
+            ...bookmarkRecords.map((item) => item.manga_id),
+            ...historyRecords.map((item) => item.manga_id),
+          ]),
+        ]
+
+        let comicMap = new Map()
+
+        // Fetch actual comics from Supabase instead of local demo data.
+        if (comicIds.length > 0) {
+          const { data: comics, error: comicsError } = await supabase
+            .from('comics')
+            .select('*')
+            .in('id', comicIds)
+
+          if (comicsError) throw comicsError
+
+          comicMap = new Map(
+            (comics || []).map((comic) => [
+              comic.id,
+              formatComic(comic),
+            ])
+          )
+        }
+
         if (!active) return
 
-        const savedManga = bookmarkResult.data
+        // Build the saved comics list.
+        const savedManga = bookmarkRecords
           .map((item) => {
-            const story = manga.find((entry) => entry.id === item.manga_id)
+            const comic = comicMap.get(item.manga_id)
 
-            return story ? { ...story, savedAt: item.created_at } : null
+            return comic
+              ? {
+                  ...comic,
+                  savedAt: item.created_at,
+                }
+              : null
           })
           .filter(Boolean)
 
-        const readingManga = historyResult.data
+        // Build the reading history list.
+        const readingManga = historyRecords
           .map((item) => {
-            const story = manga.find((entry) => entry.id === item.manga_id)
+            const comic = comicMap.get(item.manga_id)
 
-            return story
+            return comic
               ? {
-                  ...story,
+                  ...comic,
                   lastReadChapter: item.chapter_number,
                   lastReadAt: item.updated_at,
                 }
@@ -112,6 +165,7 @@ export default function Library() {
     }
   }, [navigate])
 
+  // Remove a bookmark from Supabase.
   const removeBookmark = async (mangaId) => {
     if (!user || removingId) return
 
@@ -152,8 +206,13 @@ export default function Library() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#09090e] text-white">
         <div className="text-center">
-          <LoaderCircle className="mx-auto animate-spin text-purple-400" size={34} />
-          <p className="mt-4 text-sm text-gray-400">Loading your library...</p>
+          <LoaderCircle
+            className="mx-auto animate-spin text-purple-400"
+            size={34}
+          />
+          <p className="mt-4 text-sm text-gray-400">
+            Loading your library...
+          </p>
         </div>
       </main>
     )
@@ -209,7 +268,8 @@ export default function Library() {
             </h1>
 
             <p className="mt-3 text-sm text-gray-500">
-              Welcome back{user?.user_metadata?.username
+              Welcome back
+              {user?.user_metadata?.username
                 ? `, ${user.user_metadata.username}`
                 : ''}. Your manga journey continues here.
             </p>
@@ -231,7 +291,8 @@ export default function Library() {
 
         {/* ERROR MESSAGE */}
         {error && (
-          <div className="mt-6 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <div className="mt-6 flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            <AlertCircle size={17} />
             {error}
           </div>
         )}
@@ -297,23 +358,21 @@ export default function Library() {
                     className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition hover:-translate-y-1 hover:border-purple-500/40"
                   >
                     <Link to={`/manga/${story.id}`}>
-                      <div className={`relative aspect-[3/4] overflow-hidden bg-gradient-to-br ${story.colors || 'from-purple-950 to-black'}`}>
+                      <div className={`relative aspect-[3/4] overflow-hidden bg-gradient-to-br ${story.colors}`}>
 
-                        {story.coverImage && (
+                        {story.coverImage ? (
                           <img
                             src={story.coverImage}
                             alt={story.title}
                             className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                           />
-                        )}
-
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          {!story.coverImage && (
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
                             <span className="text-6xl text-white/60">
-                              {story.symbol || '◇'}
+                              {story.symbol}
                             </span>
-                          )}
-                        </div>
+                          </div>
+                        )}
 
                         <span className="absolute left-3 top-3 rounded-lg bg-black/60 px-2 py-1 text-[10px] font-bold text-purple-200 backdrop-blur">
                           {story.status}
@@ -329,7 +388,7 @@ export default function Library() {
                         </h3>
                       </Link>
 
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 truncate text-xs text-gray-500">
                         {story.genre} · {story.chapter}
                       </p>
 
@@ -389,7 +448,7 @@ export default function Library() {
 
                     <Link
                       to={`/manga/${story.id}`}
-                      className={`flex h-28 w-full shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${story.colors || 'from-purple-950 to-black'} sm:w-24`}
+                      className={`flex h-28 w-full shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${story.colors} sm:w-24`}
                     >
                       {story.coverImage ? (
                         <img
@@ -399,7 +458,7 @@ export default function Library() {
                         />
                       ) : (
                         <span className="text-4xl text-white/60">
-                          {story.symbol || '◇'}
+                          {story.symbol}
                         </span>
                       )}
                     </Link>
@@ -450,4 +509,14 @@ export default function Library() {
 
     </main>
   )
+}
+
+function formatDate(date) {
+  if (!date) return ''
+
+  return new Date(date).toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
 }
