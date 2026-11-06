@@ -1,0 +1,46 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="rose" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#dfb9bf"/>
+      <stop offset="100%" stop-color="#a87581"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="50" cy="47" r="39"
+    fill="none" stroke="#c69aa1" stroke-opacity=".4" stroke-width="1.5"/>
+  <circle cx="50" cy="47" r="32"
+    fill="none" stroke="#c69aa1" stroke-opacity=".2"/>
+
+  <path
+    d="M50 77 C38 67 24 64 12 68 V36 C26 32 39 36 50 46 C61 36 74 32 88 36 V68 C76 64 62 67 50 77Z"
+    fill="#211a1e"
+    stroke="url(#rose)"
+    stroke-width="2.8"
+    stroke-linejoin="round"
+  />
+
+  <path
+    d="M50 46 V77 M18 44 C29 42 39 46 46 52 M82 44 C71 42 61 46 54 52"
+    fill="none" stroke="#f1e7e8" stroke-width="1.5"
+    stroke-linecap="round"
+  />
+
+  <path
+    d="M31 49 A19 25 0 0 1 69 49"
+    fill="none" stroke="#dfb9bf" stroke-width="2.5"
+    stroke-linecap="round"
+  />
+
+  <path
+    d="M50 10 L54 19 L63 23 L54 27 L50 36 L46 27 L37 23 L46 19Z"
+    fill="url(#rose)"
+  />
+
+  <path
+    d="M24 20 L26 25 L31 27 L26 29 L24 34 L22 29 L17 27 L22 25Z"
+    fill="#dfb9bf"
+  />
+
+  <circle cx="76" cy="27" r="2" fill="#f1e7e8"/>
+</svg>

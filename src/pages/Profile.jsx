@@ -1,8 +1,6 @@
-
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  Sparkles,
   UserRound,
   Mail,
   CalendarDays,
@@ -14,9 +12,24 @@ import {
   Trash2,
   BookOpen,
   Clock3,
+  Sparkles,
+  ChevronRight,
+  ShieldCheck,
 } from 'lucide-react'
 
 import { supabase } from '../lib/supabase'
+
+function Emblem({ size = 42 }) {
+  return (
+    <img
+      src="/abyssora-mark.svg"
+      alt="ABYSSORA"
+      width={size}
+      height={size}
+      className="object-contain"
+    />
+  )
+}
 
 function formatComic(comic) {
   const genres = Array.isArray(comic.genres)
@@ -27,13 +40,28 @@ function formatComic(comic) {
     ...comic,
     coverImage: comic.cover_image || '',
     genre: genres,
-    colors: comic.colors || 'from-purple-950 via-violet-900 to-slate-950',
+    colors: comic.colors || 'from-[#292126] via-[#493039] to-[#171316]',
     symbol: comic.symbol || '✧',
     status: comic.status || 'Ongoing',
   }
 }
 
-export default function Profile() {
+const panel =
+  'rounded-3xl border border-[#c69aa1]/15 bg-[#191417]'
+
+const inputStyle =
+  'w-full bg-transparent text-sm text-[#f4e9e9] outline-none placeholder:text-[#75666a]'
+
+function SectionEyebrow({ children, icon: Icon }) {
+  return (
+    <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.25em] text-[#c58d98]">
+      {Icon && <Icon size={14} />}
+      {children}
+    </div>
+  )
+}
+
+function Profile() {
   const navigate = useNavigate()
 
   const [user, setUser] = useState(null)
@@ -74,7 +102,7 @@ export default function Profile() {
     }
   }, [navigate])
 
-  // Load bookmarks and reading activity from Supabase
+  // Load bookmarks and reading activity
   useEffect(() => {
     let active = true
 
@@ -99,11 +127,17 @@ export default function Profile() {
       if (!active) return
 
       if (bookmarkResult.error) {
-        console.error('Could not load bookmarks:', bookmarkResult.error.message)
+        console.error(
+          'Could not load bookmarks:',
+          bookmarkResult.error.message
+        )
       }
 
       if (historyResult.error) {
-        console.error('Could not load reading history:', historyResult.error.message)
+        console.error(
+          'Could not load reading history:',
+          historyResult.error.message
+        )
       }
 
       const bookmarkRows = bookmarkResult.data || []
@@ -179,7 +213,7 @@ export default function Profile() {
     }
   }, [user])
 
-  // Save username to Supabase authentication metadata
+  // Save username
   const handleSave = async (event) => {
     event.preventDefault()
 
@@ -219,7 +253,7 @@ export default function Profile() {
     setMessage('Your profile has been updated successfully!')
   }
 
-  // Remove bookmark from Supabase
+  // Remove bookmark
   const handleRemoveBookmark = async (mangaId) => {
     if (!user) return
 
@@ -245,10 +279,13 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#09090e] text-white">
+      <div className="flex min-h-screen items-center justify-center bg-[#110e10] text-[#f4e9e9]">
         <div className="text-center">
-          <LoaderCircle size={32} className="mx-auto animate-spin text-purple-400" />
-          <p className="mt-4 text-sm text-gray-400">
+          <LoaderCircle
+            size={32}
+            className="mx-auto animate-spin text-[#c58d98]"
+          />
+          <p className="mt-4 text-sm text-[#a9959a]">
             Loading your profile...
           </p>
         </div>
@@ -267,125 +304,208 @@ export default function Profile() {
     : 'Unavailable'
 
   return (
-    <main className="min-h-screen bg-[#09090e] px-5 py-10 text-white">
-      <div className="mx-auto max-w-4xl">
+    <main className="min-h-screen bg-[#110e10] px-4 py-8 text-[#f4e9e9] sm:px-6 sm:py-10">
+
+      <div className="mx-auto max-w-5xl">
 
         {/* HEADER */}
-        <header className="mb-10 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-violet-800">
-              <Sparkles size={22} />
+        <header className="mb-10 flex items-center justify-between gap-4">
+          <Link to="/" className="group flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#c69aa1]/30 bg-[#211a1e] transition group-hover:border-[#c69aa1]/70">
+              <Emblem size={34} />
             </div>
 
-            <span className="text-xl font-black tracking-[0.12em]">
-              ABYSS<span className="text-purple-400">ORA</span>
-            </span>
+            <div className="leading-none">
+              <div className="font-display text-[23px] font-semibold tracking-[0.14em] text-[#f1e7e8]">
+                ABYSSORA
+              </div>
+              <div className="mt-1.5 text-[8px] font-semibold tracking-[0.3em] text-[#a88b91]">
+                WORLDS BEYOND STORIES
+              </div>
+            </div>
           </Link>
 
           <Link
             to="/"
-            className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm text-gray-300 transition hover:border-purple-500 hover:text-white"
+            className="flex items-center gap-2 rounded-xl border border-[#c69aa1]/15 px-4 py-2.5 text-xs font-semibold text-[#c8b7ba] transition hover:border-[#c58d98]/50 hover:text-[#f4e9e9]"
           >
-            <ArrowLeft size={16} />
-            Home
+            <ArrowLeft size={15} />
+            <span className="hidden sm:inline">Back to home</span>
+            <span className="sm:hidden">Home</span>
           </Link>
         </header>
 
-        {/* PROFILE CARD */}
-        <section className="overflow-hidden rounded-3xl border border-purple-500/20 bg-[#111019] shadow-2xl shadow-purple-950/10">
+        {/* PROFILE HERO */}
+        <section className={`${panel} relative overflow-hidden`}>
 
-          <div className="relative overflow-hidden border-b border-white/[0.07] bg-gradient-to-br from-[#29164b] to-[#111019] px-7 py-10">
-            <div className="absolute -right-10 -top-16 h-48 w-48 rounded-full bg-purple-500/20 blur-3xl" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#493039]/40 via-transparent to-transparent" />
 
-            <div className="relative flex items-center gap-5">
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-purple-300/20 bg-purple-500/20 text-purple-200">
-                <UserRound size={38} />
-              </div>
+          <div className="absolute -right-20 -top-32 h-80 w-80 rounded-full bg-[#c58d98]/[0.07] blur-[100px]" />
 
-              <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-purple-300">
-                  Reader account
-                </p>
+          <div className="relative flex flex-col gap-6 p-7 sm:flex-row sm:items-center sm:p-10">
 
-                <h1 className="mt-2 truncate text-3xl font-black">
-                  {user.user_metadata?.username || 'Your Profile'}
-                </h1>
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-3xl border border-[#c69aa1]/25 bg-[#c58d98]/[0.09] text-[#dfb9bf] shadow-xl shadow-black/20">
+              <UserRound size={46} strokeWidth={1.4} />
+            </div>
 
-                <p className="mt-1 text-sm text-gray-400">
-                  Welcome to ABYSSORA.
-                </p>
+            <div className="min-w-0 flex-1">
+              <SectionEyebrow icon={Sparkles}>
+                Reader account
+              </SectionEyebrow>
+
+              <h1 className="truncate font-display text-4xl font-semibold tracking-wide text-[#f4e9e9] sm:text-5xl">
+                {user.user_metadata?.username || 'Your Profile'}
+              </h1>
+
+              <p className="mt-2 text-sm text-[#b9a8ac]">
+                Welcome to your personal corner of ABYSSORA.
+              </p>
+
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#c69aa1]/20 bg-[#c58d98]/[0.07] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#d5a2aa]">
+                  <ShieldCheck size={13} />
+                  Member
+                </span>
+
+                <span className="text-xs text-[#89777c]">
+                  Joined {joinedDate}
+                </span>
               </div>
             </div>
           </div>
+        </section>
 
-          <div className="p-7">
-            <div className="mb-8">
-              <h2 className="text-xl font-extrabold">Profile settings</h2>
+        {/* READING STATISTICS */}
+        <section className="mt-6 grid grid-cols-2 gap-4">
 
-              <p className="mt-2 text-sm text-gray-500">
-                Manage your account information.
-              </p>
+          <div className={`${panel} p-5 sm:p-6`}>
+            <div className="flex items-center gap-2 text-xs font-medium text-[#a9959a]">
+              <Bookmark size={16} className="text-[#d5a2aa]" />
+              Bookmarked stories
             </div>
 
+            <p className="mt-4 font-display text-4xl font-semibold text-[#f4e9e9]">
+              {bookmarks.length}
+            </p>
+
+            <p className="mt-1 text-[10px] tracking-wide text-[#89777c]">
+              Saved to your collection
+            </p>
+          </div>
+
+          <div className={`${panel} p-5 sm:p-6`}>
+            <div className="flex items-center gap-2 text-xs font-medium text-[#a9959a]">
+              <BookOpen size={16} className="text-[#d5a2aa]" />
+              Stories in progress
+            </div>
+
+            <p className="mt-4 font-display text-4xl font-semibold text-[#f4e9e9]">
+              {readingHistory.length}
+            </p>
+
+            <p className="mt-1 text-[10px] tracking-wide text-[#89777c]">
+              Reading activity recorded
+            </p>
+          </div>
+        </section>
+
+        {/* PROFILE SETTINGS */}
+        <section className={`${panel} mt-8 overflow-hidden`}>
+
+          <div className="border-b border-[#c69aa1]/10 px-6 py-6 sm:px-8">
+            <SectionEyebrow icon={UserRound}>
+              Account details
+            </SectionEyebrow>
+
+            <h2 className="font-display text-3xl font-semibold text-[#f4e9e9]">
+              Profile settings
+            </h2>
+
+            <p className="mt-1 text-xs text-[#89777c]">
+              Manage your personal account information.
+            </p>
+          </div>
+
+          <div className="p-6 sm:p-8">
             <form onSubmit={handleSave}>
-              <label className="mb-2 block text-sm font-semibold text-gray-300">
-                Username
-              </label>
 
-              <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3 transition focus-within:border-purple-500/60">
-                <UserRound size={18} className="shrink-0 text-purple-400" />
+              {/* Username */}
+              <div>
+                <label className="mb-2 block text-xs font-semibold text-[#c8b7ba]">
+                  Username
+                </label>
 
-                <input
-                  value={username}
-                  onChange={(event) => {
-                    setUsername(event.target.value)
-                    setError('')
-                    setMessage('')
-                  }}
-                  placeholder="Enter your username"
-                  maxLength={20}
-                  minLength={3}
-                  required
-                  className="w-full bg-transparent text-sm text-white outline-none placeholder:text-gray-600"
-                />
+                <div className="flex items-center gap-3 rounded-xl border border-[#c69aa1]/15 bg-[#110e10] px-4 py-3.5 transition focus-within:border-[#c58d98]/60">
+                  <UserRound
+                    size={18}
+                    className="shrink-0 text-[#c58d98]"
+                  />
+
+                  <input
+                    value={username}
+                    onChange={(event) => {
+                      setUsername(event.target.value)
+                      setError('')
+                      setMessage('')
+                    }}
+                    placeholder="Enter your username"
+                    maxLength={20}
+                    minLength={3}
+                    required
+                    className={inputStyle}
+                  />
+                </div>
+
+                <p className="mt-2 text-[11px] text-[#89777c]">
+                  Your username must be between 3 and 20 characters.
+                </p>
               </div>
 
-              <p className="mt-2 text-xs text-gray-600">
-                Your username must be between 3 and 20 characters.
-              </p>
-
+              {/* Email */}
               <div className="mt-7">
-                <label className="mb-2 block text-sm font-semibold text-gray-300">
+                <label className="mb-2 block text-xs font-semibold text-[#c8b7ba]">
                   Email address
                 </label>
 
-                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                  <Mail size={18} className="shrink-0 text-purple-400" />
+                <div className="flex items-center gap-3 rounded-xl border border-[#c69aa1]/10 bg-white/[0.025] px-4 py-3.5">
+                  <Mail
+                    size={18}
+                    className="shrink-0 text-[#c58d98]"
+                  />
 
-                  <span className="min-w-0 truncate text-sm text-gray-400">
+                  <span className="min-w-0 truncate text-sm text-[#a9959a]">
                     {user.email}
+                  </span>
+
+                  <span className="ml-auto shrink-0 rounded-full border border-[#8caf9a]/20 bg-[#8caf9a]/[0.07] px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-[#9fc5ac]">
+                    Account
                   </span>
                 </div>
               </div>
 
+              {/* Joined date */}
               <div className="mt-7">
-                <label className="mb-2 block text-sm font-semibold text-gray-300">
+                <label className="mb-2 block text-xs font-semibold text-[#c8b7ba]">
                   Member since
                 </label>
 
-                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                  <CalendarDays size={18} className="shrink-0 text-purple-400" />
+                <div className="flex items-center gap-3 rounded-xl border border-[#c69aa1]/10 bg-white/[0.025] px-4 py-3.5">
+                  <CalendarDays
+                    size={18}
+                    className="shrink-0 text-[#c58d98]"
+                  />
 
-                  <span className="text-sm text-gray-400">
+                  <span className="text-sm text-[#a9959a]">
                     {joinedDate}
                   </span>
                 </div>
               </div>
 
+              {/* Feedback */}
               {error && (
                 <div
                   role="alert"
-                  className="mt-5 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300"
+                  className="mt-5 rounded-xl border border-[#d78383]/20 bg-[#d78383]/[0.08] p-3 text-sm text-[#e7a2a2]"
                 >
                   {error}
                 </div>
@@ -394,7 +514,7 @@ export default function Profile() {
               {message && (
                 <div
                   role="status"
-                  className="mt-5 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm text-emerald-300"
+                  className="mt-5 flex items-center gap-2 rounded-xl border border-[#8caf9a]/20 bg-[#8caf9a]/[0.07] p-3 text-sm text-[#a9d0b5]"
                 >
                   <CheckCircle size={17} />
                   {message}
@@ -404,7 +524,7 @@ export default function Profile() {
               <button
                 type="submit"
                 disabled={saving}
-                className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3.5 text-sm font-bold transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-[#c58d98] px-5 py-3.5 text-sm font-bold text-[#211619] transition hover:bg-[#d5a2aa] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-48"
               >
                 {saving ? (
                   <>
@@ -422,72 +542,53 @@ export default function Profile() {
           </div>
         </section>
 
-        {/* READING STATISTICS */}
-        <section className="mt-8 grid grid-cols-2 gap-4">
-          <div className="rounded-2xl border border-purple-500/20 bg-[#111019] p-5">
-            <div className="flex items-center gap-2 text-sm text-gray-400">
-              <Bookmark size={17} className="text-purple-400" />
-              Bookmarked stories
-            </div>
-
-            <p className="mt-3 text-3xl font-black text-white">
-              {bookmarks.length}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-purple-500/20 bg-[#111019] p-5">
-            <div className="flex items-center gap-2 text-sm text-gray-400">
-              <BookOpen size={17} className="text-purple-400" />
-              Stories in progress
-            </div>
-
-            <p className="mt-3 text-3xl font-black text-white">
-              {readingHistory.length}
-            </p>
-          </div>
-        </section>
-
         {/* READING HISTORY */}
-        <section className="mt-10">
-          <div className="mb-6">
-            <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-purple-400">
-              <Clock3 size={15} />
-              Your activity
-            </div>
+        <section className="mt-12">
 
-            <h2 className="text-2xl font-extrabold">
+          <div className="mb-6">
+            <SectionEyebrow icon={Clock3}>
+              Your activity
+            </SectionEyebrow>
+
+            <h2 className="font-display text-3xl font-semibold text-[#f4e9e9]">
               Recently Read
             </h2>
 
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="mt-2 text-sm text-[#89777c]">
               Pick up where your last reading session ended.
             </p>
           </div>
 
           {loadingBookmarks ? (
-            <div className="rounded-2xl border border-white/10 bg-[#111019] p-10 text-center">
-              <LoaderCircle size={26} className="mx-auto animate-spin text-purple-400" />
-              <p className="mt-3 text-sm text-gray-400">
+            <div className={`${panel} p-12 text-center`}>
+              <LoaderCircle
+                size={28}
+                className="mx-auto animate-spin text-[#c58d98]"
+              />
+              <p className="mt-3 text-sm text-[#a9959a]">
                 Loading reading activity...
               </p>
             </div>
           ) : readingHistory.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-[#111019] p-10 text-center">
-              <BookOpen size={34} className="mx-auto text-purple-400" />
+            <div className={`${panel} p-10 text-center`}>
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#c69aa1]/15 bg-[#c58d98]/[0.07]">
+                <BookOpen size={30} className="text-[#d5a2aa]" />
+              </div>
 
-              <h3 className="mt-4 text-lg font-bold">
+              <h3 className="mt-5 font-display text-2xl font-semibold">
                 No reading activity yet
               </h3>
 
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-[#89777c]">
                 Start reading a story and your progress will appear here.
               </p>
 
               <Link
                 to="/"
-                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-sm font-bold transition hover:bg-purple-500"
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#c58d98] px-5 py-3 text-sm font-bold text-[#211619] transition hover:bg-[#d5a2aa]"
               >
                 Explore manga
+                <ChevronRight size={16} />
               </Link>
             </div>
           ) : (
@@ -496,14 +597,14 @@ export default function Profile() {
                 <Link
                   key={item.id}
                   to={`/manga/${item.id}/chapter/${item.lastReadChapter}`}
-                  className="flex items-center gap-4 rounded-2xl border border-white/10 bg-[#111019] p-3 transition hover:border-purple-500/40"
+                  className="group flex items-center gap-4 rounded-2xl border border-[#c69aa1]/10 bg-[#191417] p-3 transition hover:border-[#c58d98]/40 hover:bg-[#211a1e]"
                 >
-                  <div className="h-20 w-16 shrink-0 overflow-hidden rounded-xl bg-[#171322]">
+                  <div className="h-20 w-16 shrink-0 overflow-hidden rounded-xl bg-[#211a1e]">
                     {item.coverImage ? (
                       <img
                         src={item.coverImage}
                         alt={`${item.title} cover`}
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       />
                     ) : (
                       <div className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${item.colors}`}>
@@ -515,84 +616,91 @@ export default function Profile() {
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-sm font-bold">
+                    <h3 className="truncate text-sm font-bold text-[#f4e9e9] transition group-hover:text-[#dfb9bf]">
                       {item.title}
                     </h3>
 
-                    <p className="mt-1 text-xs text-purple-300">
+                    <p className="mt-1 text-xs text-[#d5a2aa]">
                       Chapter {item.lastReadChapter}
                     </p>
 
-                    <p className="mt-2 text-xs text-gray-500">
+                    <p className="mt-2 text-[11px] text-[#89777c]">
                       {item.lastReadAt
                         ? new Date(item.lastReadAt).toLocaleDateString()
                         : 'Reading progress saved'}
                     </p>
                   </div>
 
-                  <BookOpen size={18} className="shrink-0 text-purple-400" />
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#c69aa1]/10 bg-[#211a1e] text-[#c58d98] transition group-hover:border-[#c58d98]/40">
+                    <BookOpen size={17} />
+                  </div>
                 </Link>
               ))}
 
               <Link
                 to="/library"
-                className="inline-flex items-center gap-2 pt-2 text-sm font-semibold text-purple-300 transition hover:text-purple-200"
+                className="inline-flex items-center gap-2 pt-3 text-xs font-semibold text-[#d5a2aa] transition hover:text-[#f1c8cf]"
               >
                 View full reading history
-                <ArrowLeft size={15} className="rotate-180" />
+                <ChevronRight size={15} />
               </Link>
             </div>
           )}
         </section>
 
-        {/* SAVED MANGA */}
-        <section className="mt-12">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-purple-400">
-                <Bookmark size={15} />
-                Your collection
-              </div>
+        {/* BOOKMARKS */}
+        <section className="mt-14">
 
-              <h2 className="text-2xl font-extrabold">
+          <div className="mb-6 flex items-end justify-between gap-3">
+            <div>
+              <SectionEyebrow icon={Bookmark}>
+                Your collection
+              </SectionEyebrow>
+
+              <h2 className="font-display text-3xl font-semibold text-[#f4e9e9]">
                 My Bookmarks
               </h2>
 
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-[#89777c]">
                 All your favourite stories in one place.
               </p>
             </div>
 
-            <div className="rounded-xl border border-purple-500/20 bg-purple-500/10 px-4 py-2 text-sm font-bold text-purple-300">
+            <div className="shrink-0 rounded-xl border border-[#c69aa1]/20 bg-[#c58d98]/[0.07] px-3 py-2 text-xs font-bold text-[#d5a2aa]">
               {bookmarks.length} Saved
             </div>
           </div>
 
           {loadingBookmarks ? (
-            <div className="rounded-2xl border border-white/10 bg-[#111019] p-12 text-center">
-              <LoaderCircle size={28} className="mx-auto animate-spin text-purple-400" />
-              <p className="mt-4 text-sm text-gray-400">
+            <div className={`${panel} p-12 text-center`}>
+              <LoaderCircle
+                size={28}
+                className="mx-auto animate-spin text-[#c58d98]"
+              />
+              <p className="mt-4 text-sm text-[#a9959a]">
                 Loading your bookmarks...
               </p>
             </div>
           ) : bookmarks.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-[#111019] p-12 text-center">
-              <BookOpen size={36} className="mx-auto text-purple-400" />
+            <div className={`${panel} p-12 text-center`}>
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#c69aa1]/15 bg-[#c58d98]/[0.07]">
+                <Bookmark size={30} className="text-[#d5a2aa]" />
+              </div>
 
-              <h3 className="mt-5 text-lg font-bold">
+              <h3 className="mt-5 font-display text-2xl font-semibold">
                 Your collection is empty
               </h3>
 
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-[#89777c]">
                 Explore ABYSSORA and bookmark stories you love.
               </p>
 
               <Link
                 to="/"
-                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-sm font-bold transition hover:bg-purple-500"
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#c58d98] px-5 py-3 text-sm font-bold text-[#211619] transition hover:bg-[#d5a2aa]"
               >
                 Explore manga
-                <ArrowLeft size={16} className="rotate-180" />
+                <ChevronRight size={16} />
               </Link>
             </div>
           ) : (
@@ -600,11 +708,11 @@ export default function Profile() {
               {bookmarks.map((item) => (
                 <article
                   key={item.id}
-                  className="group min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#111019] transition hover:-translate-y-1 hover:border-purple-500/40"
+                  className="group min-w-0 overflow-hidden rounded-2xl border border-[#c69aa1]/10 bg-[#191417] transition hover:-translate-y-1 hover:border-[#c58d98]/40"
                 >
                   <Link
                     to={`/manga/${item.id}`}
-                    className="relative block aspect-[3/4] overflow-hidden bg-[#171322]"
+                    className="relative block aspect-[3/4] overflow-hidden bg-[#211a1e]"
                   >
                     {item.coverImage ? (
                       <img
@@ -621,25 +729,29 @@ export default function Profile() {
                       </div>
                     )}
 
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+
+                    <div className="absolute bottom-3 left-3 rounded-full border border-white/10 bg-black/40 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-white/80 backdrop-blur-sm">
+                      {item.status}
+                    </div>
                   </Link>
 
                   <div className="p-3">
                     <Link
                       to={`/manga/${item.id}`}
-                      className="block truncate text-sm font-bold transition hover:text-purple-300"
+                      className="block truncate text-sm font-bold text-[#f4e9e9] transition hover:text-[#dfb9bf]"
                     >
                       {item.title}
                     </Link>
 
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 truncate text-[10px] text-[#89777c]">
                       {item.genre}
                     </p>
 
                     <button
                       onClick={() => handleRemoveBookmark(item.id)}
                       disabled={removingId === item.id}
-                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/20 bg-red-500/[0.06] px-3 py-2 text-xs font-semibold text-red-300 transition hover:bg-red-500/15 disabled:opacity-50"
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-[#d78383]/20 bg-[#d78383]/[0.05] px-3 py-2.5 text-[10px] font-semibold text-[#d99a9a] transition hover:border-[#d78383]/40 hover:bg-[#d78383]/[0.12] disabled:opacity-50"
                     >
                       {removingId === item.id ? (
                         <>
@@ -660,11 +772,23 @@ export default function Profile() {
           )}
         </section>
 
-        <p className="mt-10 text-center text-xs text-gray-600">
-          Your journey through endless stories starts here.
-        </p>
+        {/* FOOTER */}
+        <footer className="mt-14 border-t border-[#c69aa1]/10 py-7 text-center">
+          <div className="mb-3 flex items-center justify-center gap-2">
+            <Emblem size={23} />
+            <span className="font-display text-sm font-semibold tracking-[0.18em] text-[#c8b7ba]">
+              ABYSSORA
+            </span>
+          </div>
+
+          <p className="text-[10px] tracking-wide text-[#75666a]">
+            Your journey through endless stories starts here.
+          </p>
+        </footer>
 
       </div>
     </main>
   )
 }
+
+export default Profile

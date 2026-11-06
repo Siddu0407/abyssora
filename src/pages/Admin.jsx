@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
@@ -39,7 +38,7 @@ const emptyForm = {
   rating: '0',
   author: '',
   year: String(new Date().getFullYear()),
-  colors: 'from-violet-950 via-purple-800 to-slate-950',
+  colors: 'from-stone-950 via-rose-950 to-neutral-950',
   symbol: '✧',
   cover_image: '',
   description: '',
@@ -50,6 +49,57 @@ const emptyNotification = {
   message: '',
   type: 'announcement',
   link: '/',
+}
+
+const panel =
+  'rounded-2xl border border-[#c69aa1]/15 bg-[#191417]'
+
+const inputStyle =
+  'w-full rounded-xl border border-[#c69aa1]/15 bg-[#110e10] px-4 py-3 text-sm text-[#f4e9e9] outline-none transition placeholder:text-[#89777c] focus:border-[#c58d98]'
+
+const labelStyle =
+  'mb-2 block text-sm font-semibold text-[#d9c9cc]'
+
+const buttonPrimary =
+  'flex items-center justify-center gap-2 rounded-xl bg-[#c58d98] px-5 py-3 text-sm font-bold text-[#211619] transition hover:bg-[#d5a2aa] disabled:cursor-not-allowed disabled:opacity-50'
+
+function Emblem({ size = 40 }) {
+  return (
+    <img
+      src="/abyssora-mark.svg"
+      alt="ABYSSORA"
+      width={size}
+      height={size}
+      className="object-contain"
+    />
+  )
+}
+
+function SectionLabel({ icon: Icon, children }) {
+  return (
+    <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#c58d98]">
+      <Icon size={16} />
+      {children}
+    </div>
+  )
+}
+
+function Notice({ type = 'success', children }) {
+  const styles =
+    type === 'error'
+      ? 'border-red-400/20 bg-red-400/5 text-red-300'
+      : 'border-emerald-400/20 bg-emerald-400/5 text-emerald-300'
+
+  const Icon = type === 'error' ? AlertCircle : CheckCircle
+
+  return (
+    <div
+      className={`flex items-start gap-3 rounded-xl border p-4 text-sm ${styles}`}
+    >
+      <Icon size={19} className="mt-0.5 shrink-0" />
+      <p className="break-words">{children}</p>
+    </div>
+  )
 }
 
 export default function Admin() {
@@ -73,7 +123,6 @@ export default function Admin() {
   const [deletingId, setDeletingId] = useState(null)
   const [success, setSuccess] = useState('')
 
-  // NOTIFICATION MANAGEMENT
   const [notification, setNotification] = useState({
     ...emptyNotification,
   })
@@ -161,7 +210,6 @@ export default function Admin() {
     navigate('/login', { replace: true })
   }
 
-  // SEND NOTIFICATION TO ALL REGISTERED USERS
   const handleSendNotification = async (event) => {
     event.preventDefault()
 
@@ -224,7 +272,7 @@ export default function Admin() {
       year: String(comic.year || new Date().getFullYear()),
       colors:
         comic.colors ||
-        'from-violet-950 via-purple-800 to-slate-950',
+        'from-stone-950 via-rose-950 to-neutral-950',
       symbol: comic.symbol || '✧',
       cover_image: comic.cover_image || '',
       description: comic.description || '',
@@ -289,9 +337,6 @@ export default function Admin() {
     return data.publicUrl
   }
 
-  // ADD OR EDIT A COMIC
-  // NEW COMICS NOTIFY ALL USERS.
-  // EDITED COMICS NOTIFY ONLY USERS WHO BOOKMARKED THEM.
   const handleSaveComic = async (event) => {
     event.preventDefault()
 
@@ -356,7 +401,6 @@ export default function Admin() {
       const wasEditing = Boolean(editingId)
       let notificationMessage = ''
 
-      // EXISTING COMIC: NOTIFY ONLY ITS BOOKMARKERS
       if (wasEditing) {
         const { data, error: notificationError } = await supabase.rpc(
           'admin_notify_comic_update',
@@ -377,7 +421,6 @@ export default function Admin() {
         }
       }
 
-      // NEW COMIC: NOTIFY ALL REGISTERED USERS
       if (!wasEditing && newComicId) {
         const { data, error: notificationError } = await supabase.rpc(
           'admin_notify_new_comic',
@@ -468,13 +511,14 @@ export default function Admin() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#09090e] text-white">
+      <main className="flex min-h-screen items-center justify-center bg-[#110e10] text-[#f4e9e9]">
         <div className="text-center">
+          <Emblem size={58} />
           <LoaderCircle
-            className="mx-auto mb-4 animate-spin text-purple-400"
-            size={36}
+            className="mx-auto mb-4 mt-5 animate-spin text-[#c58d98]"
+            size={30}
           />
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-[#a99499]">
             Securing your admin dashboard...
           </p>
         </div>
@@ -483,17 +527,29 @@ export default function Admin() {
   }
 
   return (
-    <main className="min-h-screen bg-[#09090e] text-white">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-white/10 bg-[#0d0d14] p-6 md:flex md:flex-col">
-        <Link to="/" className="mb-12 text-2xl font-black tracking-[0.2em]">
-          ABYSS<span className="text-purple-400">ORA</span>
+    <main className="min-h-screen bg-[#110e10] text-[#f4e9e9]">
+      {/* SIDEBAR */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-[#c69aa1]/15 bg-[#151114] p-6 md:flex">
+        <Link to="/" className="mb-12 flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#c69aa1]/25 bg-[#211a1e]">
+            <Emblem size={34} />
+          </div>
+
+          <div className="leading-none">
+            <div className="font-display text-xl font-semibold tracking-[0.13em] text-[#f1e7e8]">
+              ABYSSORA
+            </div>
+            <div className="mt-1.5 text-[8px] font-semibold tracking-[0.25em] text-[#a88b91]">
+              ADMINISTRATION
+            </div>
+          </div>
         </Link>
 
-        <div className="mb-4 text-xs font-bold uppercase tracking-widest text-gray-500">
-          Administration
+        <div className="mb-4 text-[10px] font-bold uppercase tracking-[0.25em] text-[#89777c]">
+          Workspace
         </div>
 
-        <div className="flex items-center gap-3 rounded-xl border border-purple-500/20 bg-purple-500/10 px-4 py-3 text-purple-300">
+        <div className="flex items-center gap-3 rounded-xl border border-[#c69aa1]/20 bg-[#c58d98]/10 px-4 py-3 text-[#d5a2aa]">
           <LayoutDashboard size={19} />
           <span className="text-sm font-semibold">Dashboard</span>
         </div>
@@ -501,7 +557,7 @@ export default function Admin() {
         <div className="mt-auto space-y-3">
           <Link
             to="/"
-            className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-gray-400 transition hover:bg-white/5 hover:text-white"
+            className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-[#ad9da1] transition hover:bg-white/5 hover:text-[#f4e9e9]"
           >
             <Home size={18} />
             Back to Website
@@ -509,7 +565,7 @@ export default function Admin() {
 
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-gray-400 transition hover:bg-red-500/10 hover:text-red-400"
+            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-[#ad9da1] transition hover:bg-red-400/10 hover:text-red-300"
           >
             <LogOut size={18} />
             Sign Out
@@ -517,13 +573,14 @@ export default function Admin() {
         </div>
       </aside>
 
+      {/* MAIN CONTENT */}
       <section className="md:ml-64">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 bg-[#0d0d14] px-5 py-5 sm:px-8">
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#c69aa1]/15 bg-[#151114]/95 px-5 py-5 sm:px-8">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-purple-400">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#c58d98]">
               Control Center
             </p>
-            <h1 className="mt-1 text-2xl font-black sm:text-3xl">
+            <h1 className="mt-1 font-display text-3xl font-semibold sm:text-4xl">
               Admin Dashboard
             </h1>
           </div>
@@ -532,7 +589,7 @@ export default function Admin() {
             <button
               onClick={() => loadDashboard(true)}
               disabled={refreshing}
-              className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-gray-300 transition hover:bg-white/5 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-xl border border-[#c69aa1]/20 px-4 py-2.5 text-sm text-[#d5c5c8] transition hover:bg-white/5 disabled:opacity-50"
             >
               <RefreshCw
                 size={16}
@@ -541,28 +598,35 @@ export default function Admin() {
               Refresh
             </button>
 
-            <div className="hidden rounded-xl border border-purple-500/20 bg-purple-500/10 px-4 py-2.5 text-xs font-semibold text-purple-300 sm:block">
-              <ShieldCheck className="mr-1 inline" size={15} />
+            <div className="hidden items-center gap-2 rounded-xl border border-[#c69aa1]/20 bg-[#c58d98]/10 px-4 py-2.5 text-xs font-semibold text-[#d5a2aa] sm:flex">
+              <ShieldCheck size={15} />
               Administrator
             </div>
           </div>
         </header>
 
         <div className="p-5 sm:p-8">
-          <div className="mb-8 rounded-2xl border border-purple-500/20 bg-gradient-to-r from-purple-950/60 to-[#15101f] p-6">
-            <div className="flex items-start gap-4">
-              <div className="rounded-xl bg-purple-500/15 p-3 text-purple-300">
+          {/* WELCOME */}
+          <div className="relative mb-8 overflow-hidden rounded-2xl border border-[#c69aa1]/20 bg-gradient-to-br from-[#2a1e23] via-[#211a1e] to-[#151114] p-6 sm:p-8">
+            <div className="pointer-events-none absolute -right-12 -top-16 h-56 w-56 rounded-full border border-[#c58d98]/10" />
+            <div className="pointer-events-none absolute -right-5 -top-9 h-40 w-40 rounded-full border border-[#c58d98]/10" />
+
+            <div className="relative flex items-start gap-4">
+              <div className="rounded-xl border border-[#c69aa1]/20 bg-[#c58d98]/10 p-3 text-[#d5a2aa]">
                 <ShieldCheck size={27} />
               </div>
 
-              <div>
-                <h2 className="text-lg font-bold">
+              <div className="min-w-0">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-[#c58d98]">
+                  Secure Workspace
+                </p>
+                <h2 className="font-display text-2xl font-semibold sm:text-3xl">
                   Welcome, Administrator
                 </h2>
-                <p className="mt-1 break-all text-sm text-gray-400">
+                <p className="mt-2 break-all text-sm text-[#ad9da1]">
                   {adminEmail}
                 </p>
-                <p className="mt-3 text-sm text-gray-300">
+                <p className="mt-3 text-sm text-[#c9b9bd]">
                   You have access to the ABYSSORA administration area.
                 </p>
               </div>
@@ -570,7 +634,7 @@ export default function Admin() {
           </div>
 
           {error && (
-            <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300">
+            <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-400/20 bg-red-400/5 p-4 text-sm text-red-300">
               <AlertCircle size={19} className="mt-0.5 shrink-0" />
               <div>
                 <p className="font-semibold">
@@ -581,38 +645,45 @@ export default function Admin() {
             </div>
           )}
 
+          {/* STATISTICS */}
           <div className="mb-5">
-            <h2 className="text-xl font-bold">Website Overview</h2>
-            <p className="mt-1 text-sm text-gray-500">
+            <SectionLabel icon={LayoutDashboard}>
+              Overview
+            </SectionLabel>
+            <h2 className="font-display text-3xl font-semibold">
+              Website Overview
+            </h2>
+            <p className="mt-1 text-sm text-[#89777c]">
               Live figures retrieved from your Supabase database.
             </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {statCards.map((card) => {
+            {statCards.map((card, index) => {
               const Icon = card.icon
 
               return (
                 <div
                   key={card.label}
-                  className="rounded-2xl border border-white/10 bg-[#11111a] p-6 transition hover:border-purple-500/30"
+                  className={`${panel} group p-6 transition hover:border-[#c69aa1]/35`}
                 >
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-400">
+                    <p className="text-sm font-medium text-[#ad9da1]">
                       {card.label}
                     </p>
-                    <div className="rounded-xl bg-purple-500/10 p-3 text-purple-300">
+
+                    <div className="rounded-xl border border-[#c69aa1]/15 bg-[#c58d98]/10 p-3 text-[#d5a2aa] transition group-hover:bg-[#c58d98]/15">
                       <Icon size={21} />
                     </div>
                   </div>
 
-                  <p className="mt-5 text-4xl font-black">
+                  <p className="mt-5 font-display text-5xl font-semibold">
                     {card.value == null
                       ? '—'
                       : Number(card.value).toLocaleString()}
                   </p>
 
-                  <p className="mt-2 text-xs text-gray-500">
+                  <p className="mt-2 text-xs text-[#89777c]">
                     {card.description}
                   </p>
                 </div>
@@ -620,32 +691,33 @@ export default function Admin() {
             })}
           </div>
 
-          {/* NOTIFICATION MANAGEMENT */}
+          {/* NOTIFICATIONS */}
           <section className="mt-12">
             <div className="mb-6">
-              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-purple-400">
-                <Bell size={16} />
+              <SectionLabel icon={Bell}>
                 Communication Center
-              </div>
+              </SectionLabel>
 
-              <h2 className="text-2xl font-black">
+              <h2 className="font-display text-3xl font-semibold">
                 Notification Management
               </h2>
 
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-[#89777c]">
                 Send announcements and updates directly to every registered ABYSSORA user.
               </p>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#11111a]">
-              <div className="flex items-center gap-3 border-b border-white/10 bg-purple-500/5 p-5 sm:p-6">
-                <div className="rounded-xl bg-purple-500/15 p-3 text-purple-300">
+            <div className={`${panel} overflow-hidden`}>
+              <div className="flex items-center gap-3 border-b border-[#c69aa1]/15 bg-[#c58d98]/5 p-5 sm:p-6">
+                <div className="rounded-xl border border-[#c69aa1]/20 bg-[#c58d98]/10 p-3 text-[#d5a2aa]">
                   <Megaphone size={23} />
                 </div>
 
                 <div>
-                  <h3 className="font-bold">Create Announcement</h3>
-                  <p className="mt-1 text-xs text-gray-500">
+                  <h3 className="font-semibold text-[#f1e7e8]">
+                    Create Announcement
+                  </h3>
+                  <p className="mt-1 text-xs text-[#89777c]">
                     Your notification will appear in users' notification centers.
                   </p>
                 </div>
@@ -656,21 +728,15 @@ export default function Admin() {
                 className="space-y-5 p-5 sm:p-6"
               >
                 {notificationSuccess && (
-                  <div className="flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-300">
-                    <CheckCircle size={19} className="mt-0.5 shrink-0" />
-                    <p>{notificationSuccess}</p>
-                  </div>
+                  <Notice>{notificationSuccess}</Notice>
                 )}
 
                 {notificationError && (
-                  <div className="flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300">
-                    <AlertCircle size={19} className="mt-0.5 shrink-0" />
-                    <p>{notificationError}</p>
-                  </div>
+                  <Notice type="error">{notificationError}</Notice>
                 )}
 
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-300">
+                  <label className={labelStyle}>
                     Notification Title *
                   </label>
 
@@ -686,12 +752,12 @@ export default function Admin() {
                     maxLength={120}
                     required
                     placeholder="Example: New chapter released!"
-                    className="w-full rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500"
+                    className={inputStyle}
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-300">
+                  <label className={labelStyle}>
                     Message *
                   </label>
 
@@ -707,17 +773,17 @@ export default function Admin() {
                     rows={4}
                     required
                     placeholder="Write your announcement here..."
-                    className="w-full resize-y rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500"
+                    className={`${inputStyle} resize-y`}
                   />
 
-                  <p className="mt-1 text-right text-xs text-gray-600">
+                  <p className="mt-1 text-right text-xs text-[#89777c]">
                     {notification.message.length}/1000
                   </p>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">
+                    <label className={labelStyle}>
                       Notification Type
                     </label>
 
@@ -729,7 +795,7 @@ export default function Admin() {
                           type: event.target.value,
                         }))
                       }
-                      className="w-full rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500"
+                      className={inputStyle}
                     >
                       <option value="announcement">Announcement</option>
                       <option value="new_comic">New Comic</option>
@@ -739,7 +805,7 @@ export default function Admin() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">
+                    <label className={labelStyle}>
                       Destination Link
                     </label>
 
@@ -753,34 +819,37 @@ export default function Admin() {
                         }))
                       }
                       placeholder="/"
-                      className="w-full rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500"
+                      className={inputStyle}
                     />
 
-                    <p className="mt-1 text-xs text-gray-600">
+                    <p className="mt-1 text-xs text-[#89777c]">
                       Example: / or /manga/your-comic-id
                     </p>
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
+                <div className="rounded-xl border border-[#c69aa1]/20 bg-[#c58d98]/5 p-4">
                   <div className="flex items-start gap-3">
-                    <Users size={19} className="mt-0.5 shrink-0 text-purple-300" />
+                    <Users
+                      size={19}
+                      className="mt-0.5 shrink-0 text-[#d5a2aa]"
+                    />
                     <div>
-                      <p className="text-sm font-semibold text-purple-200">
+                      <p className="text-sm font-semibold text-[#e0c1c6]">
                         Audience: All registered users
                       </p>
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-[#89777c]">
                         This announcement will be sent to every account registered on ABYSSORA.
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end border-t border-white/10 pt-5">
+                <div className="flex justify-end border-t border-[#c69aa1]/15 pt-5">
                   <button
                     type="submit"
                     disabled={sendingNotification}
-                    className="flex items-center justify-center gap-2 rounded-xl bg-purple-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    className={buttonPrimary}
                   >
                     {sendingNotification ? (
                       <LoaderCircle size={18} className="animate-spin" />
@@ -798,26 +867,25 @@ export default function Admin() {
           </section>
 
           {/* COMIC MANAGEMENT */}
-          <section className="mt-10">
+          <section className="mt-12">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
               <div>
-                <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-purple-400">
-                  <Library size={15} />
+                <SectionLabel icon={Library}>
                   Content Control
-                </div>
+                </SectionLabel>
 
-                <h2 className="text-2xl font-black">
+                <h2 className="font-display text-3xl font-semibold">
                   Comic Management
                 </h2>
 
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-[#89777c]">
                   Add, edit and manage comics in your library.
                 </p>
               </div>
 
               <button
                 onClick={openAddForm}
-                className="flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-sm font-bold transition hover:bg-purple-500"
+                className={buttonPrimary}
               >
                 <Plus size={18} />
                 Add New Comic
@@ -825,43 +893,42 @@ export default function Admin() {
             </div>
 
             {success && (
-              <div className="mb-5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-                {success}
+              <div className="mb-5">
+                <Notice>{success}</Notice>
               </div>
             )}
 
             {comicsError && (
-              <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300">
-                <AlertCircle size={18} className="shrink-0" />
-                <span className="break-words">{comicsError}</span>
+              <div className="mb-5">
+                <Notice type="error">{comicsError}</Notice>
               </div>
             )}
 
             {comicsLoading ? (
-              <div className="rounded-2xl border border-white/10 bg-[#11111a] p-10 text-center">
+              <div className={`${panel} p-10 text-center`}>
                 <LoaderCircle
                   size={30}
-                  className="mx-auto mb-3 animate-spin text-purple-400"
+                  className="mx-auto mb-3 animate-spin text-[#c58d98]"
                 />
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-[#ad9da1]">
                   Loading your comics...
                 </p>
               </div>
             ) : comics.length === 0 ? (
-              <div className="rounded-2xl border border-white/10 bg-[#11111a] p-12 text-center">
+              <div className={`${panel} p-12 text-center`}>
                 <BookOpen
                   size={35}
-                  className="mx-auto mb-4 text-purple-400"
+                  className="mx-auto mb-4 text-[#c58d98]"
                 />
-                <h3 className="text-lg font-bold">
+                <h3 className="font-display text-2xl font-semibold">
                   Your library is empty
                 </h3>
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-[#89777c]">
                   Add your first comic to get started.
                 </p>
                 <button
                   onClick={openAddForm}
-                  className="mt-5 rounded-xl bg-purple-600 px-5 py-3 text-sm font-bold hover:bg-purple-500"
+                  className={`${buttonPrimary} mx-auto mt-5`}
                 >
                   Add Your First Comic
                 </button>
@@ -871,9 +938,11 @@ export default function Admin() {
                 {comics.map((comic) => (
                   <article
                     key={comic.id}
-                    className="overflow-hidden rounded-2xl border border-white/10 bg-[#11111a]"
+                    className={`${panel} overflow-hidden transition hover:border-[#c69aa1]/30`}
                   >
-                    <div className={`relative flex h-48 items-center justify-center overflow-hidden bg-gradient-to-br ${comic.colors || 'from-violet-950 via-purple-800 to-slate-950'}`}>
+                    <div
+                      className={`relative flex h-48 items-center justify-center overflow-hidden bg-gradient-to-br ${comic.colors || 'from-stone-950 via-rose-950 to-neutral-950'}`}
+                    >
                       {comic.cover_image ? (
                         <img
                           src={comic.cover_image}
@@ -881,30 +950,30 @@ export default function Admin() {
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <span className="text-6xl text-white/70">
+                        <span className="font-display text-6xl text-white/70">
                           {comic.symbol || '✧'}
                         </span>
                       )}
 
-                      <span className="absolute right-3 top-3 rounded-full border border-white/10 bg-black/70 px-3 py-1 text-[10px] font-bold text-white">
+                      <span className="absolute right-3 top-3 rounded-full border border-white/15 bg-black/70 px-3 py-1 text-[10px] font-bold text-white">
                         {comic.status || 'Ongoing'}
                       </span>
                     </div>
 
                     <div className="p-5">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-purple-400">
+                      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#c58d98]">
                         {comic.genre || 'Uncategorized'}
                       </p>
 
-                      <h3 className="mt-2 line-clamp-2 text-lg font-bold">
+                      <h3 className="mt-2 line-clamp-2 font-display text-2xl font-semibold">
                         {comic.title}
                       </h3>
 
-                      <p className="mt-2 line-clamp-2 text-xs text-gray-500">
+                      <p className="mt-2 line-clamp-2 text-xs text-[#89777c]">
                         {comic.description || 'No description provided.'}
                       </p>
 
-                      <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-gray-400">
+                      <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-[#ad9da1]">
                         <span>{comic.chapters || 0} chapters</span>
                         <span>•</span>
                         <span>Rating: {comic.rating ?? 0}</span>
@@ -915,7 +984,7 @@ export default function Admin() {
                       <div className="mt-5 grid grid-cols-2 gap-3">
                         <button
                           onClick={() => openEditForm(comic)}
-                          className="flex items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-2.5 text-sm font-semibold text-purple-300 transition hover:bg-purple-500/20"
+                          className="flex items-center justify-center gap-2 rounded-xl border border-[#c69aa1]/25 bg-[#c58d98]/10 px-3 py-2.5 text-sm font-semibold text-[#d5a2aa] transition hover:bg-[#c58d98]/20"
                         >
                           <Pencil size={15} />
                           Edit
@@ -924,7 +993,7 @@ export default function Admin() {
                         <button
                           onClick={() => handleDeleteComic(comic)}
                           disabled={deletingId === comic.id}
-                          className="flex items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-3 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/15 disabled:opacity-50"
+                          className="flex items-center justify-center gap-2 rounded-xl border border-red-400/20 bg-red-400/5 px-3 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-400/10 disabled:opacity-50"
                         >
                           {deletingId === comic.id ? (
                             <LoaderCircle size={15} className="animate-spin" />
@@ -944,13 +1013,13 @@ export default function Admin() {
           {/* ADD / EDIT FORM */}
           {showForm && (
             <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/80 p-4 backdrop-blur-sm">
-              <div className="mx-auto my-6 max-w-3xl rounded-2xl border border-white/10 bg-[#11111a] shadow-2xl">
-                <div className="flex items-center justify-between border-b border-white/10 p-5 sm:p-6">
+              <div className="mx-auto my-6 max-w-3xl overflow-hidden rounded-2xl border border-[#c69aa1]/20 bg-[#191417] shadow-2xl">
+                <div className="flex items-center justify-between border-b border-[#c69aa1]/15 p-5 sm:p-6">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-purple-400">
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#c58d98]">
                       Comic Library
                     </p>
-                    <h2 className="mt-1 text-xl font-black">
+                    <h2 className="mt-1 font-display text-3xl font-semibold">
                       {editingId ? 'Edit Comic' : 'Add New Comic'}
                     </h2>
                   </div>
@@ -958,16 +1027,19 @@ export default function Admin() {
                   <button
                     onClick={() => setShowForm(false)}
                     disabled={saving}
-                    className="rounded-lg border border-white/10 p-2 text-gray-400 hover:bg-white/10 hover:text-white"
+                    className="rounded-lg border border-[#c69aa1]/15 p-2 text-[#ad9da1] transition hover:bg-white/5 hover:text-white"
                     aria-label="Close form"
                   >
                     <X size={20} />
                   </button>
                 </div>
 
-                <form onSubmit={handleSaveComic} className="space-y-5 p-5 sm:p-6">
+                <form
+                  onSubmit={handleSaveComic}
+                  className="space-y-5 p-5 sm:p-6"
+                >
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">
+                    <label className={labelStyle}>
                       Comic Title *
                     </label>
                     <input
@@ -976,74 +1048,66 @@ export default function Admin() {
                       onChange={handleFormChange}
                       required
                       placeholder="Enter comic title"
-                      className="w-full rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm outline-none transition focus:border-purple-500"
+                      className={inputStyle}
                     />
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="mb-2 block text-sm font-semibold text-gray-300">
-                        Genre *
-                      </label>
+                      <label className={labelStyle}>Genre *</label>
                       <input
                         name="genre"
                         value={form.genre}
                         onChange={handleFormChange}
                         required
                         placeholder="Action, Fantasy..."
-                        className="w-full rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm outline-none focus:border-purple-500"
+                        className={inputStyle}
                       />
                     </div>
 
                     <div>
-                      <label className="mb-2 block text-sm font-semibold text-gray-300">
-                        Author
-                      </label>
+                      <label className={labelStyle}>Author</label>
                       <input
                         name="author"
                         value={form.author}
                         onChange={handleFormChange}
                         placeholder="Creator name"
-                        className="w-full rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm outline-none focus:border-purple-500"
+                        className={inputStyle}
                       />
                     </div>
 
                     <div>
-                      <label className="mb-2 block text-sm font-semibold text-gray-300">
-                        Latest Chapter
-                      </label>
+                      <label className={labelStyle}>Latest Chapter</label>
                       <input
                         name="chapter"
                         value={form.chapter}
                         onChange={handleFormChange}
                         placeholder="Chapter 1"
-                        className="w-full rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm outline-none focus:border-purple-500"
+                        className={inputStyle}
                       />
                     </div>
 
                     <div>
-                      <label className="mb-2 block text-sm font-semibold text-gray-300">
-                        Total Chapters
-                      </label>
+                      <label className={labelStyle}>Total Chapters</label>
                       <input
                         type="number"
                         min="0"
                         name="chapters"
                         value={form.chapters}
                         onChange={handleFormChange}
-                        className="w-full rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm outline-none focus:border-purple-500"
+                        className={inputStyle}
                       />
                     </div>
 
                     <div>
-                      <label className="mb-2 block text-sm font-semibold text-gray-300">
+                      <label className={labelStyle}>
                         Publication Status
                       </label>
                       <select
                         name="status"
                         value={form.status}
                         onChange={handleFormChange}
-                        className="w-full rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm outline-none focus:border-purple-500"
+                        className={inputStyle}
                       >
                         <option value="Ongoing">Ongoing</option>
                         <option value="Completed">Completed</option>
@@ -1052,9 +1116,7 @@ export default function Admin() {
                     </div>
 
                     <div>
-                      <label className="mb-2 block text-sm font-semibold text-gray-300">
-                        Rating
-                      </label>
+                      <label className={labelStyle}>Rating</label>
                       <input
                         type="number"
                         min="0"
@@ -1063,74 +1125,70 @@ export default function Admin() {
                         name="rating"
                         value={form.rating}
                         onChange={handleFormChange}
-                        className="w-full rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm outline-none focus:border-purple-500"
+                        className={inputStyle}
                       />
                     </div>
 
                     <div>
-                      <label className="mb-2 block text-sm font-semibold text-gray-300">
-                        Release Year
-                      </label>
+                      <label className={labelStyle}>Release Year</label>
                       <input
                         type="number"
                         name="year"
                         value={form.year}
                         onChange={handleFormChange}
-                        className="w-full rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm outline-none focus:border-purple-500"
+                        className={inputStyle}
                       />
                     </div>
 
                     <div>
-                      <label className="mb-2 block text-sm font-semibold text-gray-300">
-                        Card Symbol
-                      </label>
+                      <label className={labelStyle}>Card Symbol</label>
                       <input
                         name="symbol"
                         value={form.symbol}
                         onChange={handleFormChange}
                         placeholder="✧"
-                        className="w-full rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm outline-none focus:border-purple-500"
+                        className={inputStyle}
                       />
                     </div>
                   </div>
 
-                  {/* COVER IMAGE UPLOAD */}
+                  {/* COVER IMAGE */}
                   <div>
-                    <label className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-300">
+                    <label className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#d9c9cc]">
                       <Image size={17} />
                       Comic Cover Image
                     </label>
 
                     {form.cover_image && !selectedCoverFile && (
-                      <div className="mb-4 flex items-center gap-4 rounded-xl border border-white/10 bg-[#09090e] p-3">
+                      <div className="mb-4 flex items-center gap-4 rounded-xl border border-[#c69aa1]/15 bg-[#110e10] p-3">
                         <img
                           src={form.cover_image}
                           alt="Current comic cover"
                           className="h-24 w-16 rounded-lg object-cover"
                         />
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-gray-200">
+                          <p className="text-sm font-semibold text-[#f1e7e8]">
                             Current cover
                           </p>
-                          <p className="mt-1 break-all text-xs text-gray-500">
+                          <p className="mt-1 break-all text-xs text-[#89777c]">
                             Select another image below to replace it.
                           </p>
                         </div>
                       </div>
                     )}
 
-                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-purple-500/30 bg-purple-500/5 px-5 py-8 text-center transition hover:border-purple-400 hover:bg-purple-500/10">
-                      <div className="mb-3 rounded-full bg-purple-500/15 p-3 text-purple-300">
+                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#c69aa1]/30 bg-[#c58d98]/5 px-5 py-8 text-center transition hover:border-[#c58d98] hover:bg-[#c58d98]/10">
+                      <div className="mb-3 rounded-full border border-[#c69aa1]/20 bg-[#c58d98]/10 p-3 text-[#d5a2aa]">
                         <Upload size={24} />
                       </div>
 
-                      <span className="text-sm font-bold text-gray-200">
+                      <span className="text-sm font-bold text-[#f1e7e8]">
                         {selectedCoverFile
                           ? 'Choose a different image'
                           : 'Click to upload a cover image'}
                       </span>
 
-                      <span className="mt-2 text-xs text-gray-500">
+                      <span className="mt-2 text-xs text-[#89777c]">
                         PNG, JPG, WEBP or GIF · Maximum 5 MB
                       </span>
 
@@ -1143,16 +1201,17 @@ export default function Admin() {
                     </label>
 
                     {selectedCoverFile && (
-                      <div className="mt-3 flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+                      <div className="mt-3 flex items-center gap-3 rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-3">
                         <FileImage
                           size={22}
                           className="shrink-0 text-emerald-400"
                         />
+
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold text-emerald-300">
                             {selectedCoverFile.name}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-[#89777c]">
                             {(selectedCoverFile.size / (1024 * 1024)).toFixed(2)} MB · Ready to upload
                           </p>
                         </div>
@@ -1160,7 +1219,7 @@ export default function Admin() {
                         <button
                           type="button"
                           onClick={() => setSelectedCoverFile(null)}
-                          className="rounded-lg p-2 text-gray-400 hover:bg-white/10 hover:text-white"
+                          className="rounded-lg p-2 text-[#ad9da1] hover:bg-white/10 hover:text-white"
                           aria-label="Remove selected image"
                         >
                           <X size={17} />
@@ -1168,44 +1227,42 @@ export default function Admin() {
                       </div>
                     )}
 
-                    <p className="mt-3 text-xs text-gray-500">
+                    <p className="mt-3 text-xs text-[#89777c]">
                       Your image will be uploaded to Supabase Storage when you save the comic.
                     </p>
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">
+                    <label className={labelStyle}>
                       Card Gradient Classes
                     </label>
                     <input
                       name="colors"
                       value={form.colors}
                       onChange={handleFormChange}
-                      placeholder="from-violet-950 via-purple-800 to-slate-950"
-                      className="w-full rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm outline-none focus:border-purple-500"
+                      placeholder="from-stone-950 via-rose-950 to-neutral-950"
+                      className={inputStyle}
                     />
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">
-                      Description
-                    </label>
+                    <label className={labelStyle}>Description</label>
                     <textarea
                       name="description"
                       value={form.description}
                       onChange={handleFormChange}
                       rows={4}
                       placeholder="Write a short description of this comic..."
-                      className="w-full resize-y rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm outline-none focus:border-purple-500"
+                      className={`${inputStyle} resize-y`}
                     />
                   </div>
 
-                  <div className="flex flex-wrap justify-end gap-3 border-t border-white/10 pt-5">
+                  <div className="flex flex-wrap justify-end gap-3 border-t border-[#c69aa1]/15 pt-5">
                     <button
                       type="button"
                       onClick={() => setShowForm(false)}
                       disabled={saving}
-                      className="rounded-xl border border-white/10 px-5 py-3 text-sm font-semibold text-gray-300 hover:bg-white/5"
+                      className="rounded-xl border border-[#c69aa1]/20 px-5 py-3 text-sm font-semibold text-[#d5c5c8] transition hover:bg-white/5"
                     >
                       Cancel
                     </button>
@@ -1213,13 +1270,14 @@ export default function Admin() {
                     <button
                       type="submit"
                       disabled={saving}
-                      className="flex items-center gap-2 rounded-xl bg-purple-600 px-6 py-3 text-sm font-bold transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      className={buttonPrimary}
                     >
                       {saving ? (
                         <LoaderCircle size={17} className="animate-spin" />
                       ) : (
                         <Save size={17} />
                       )}
+
                       {saving
                         ? 'Saving...'
                         : editingId
@@ -1233,11 +1291,18 @@ export default function Admin() {
           )}
 
           {/* CHAPTER MANAGEMENT */}
-          <ChapterManagement comics={comics} />
+          <section className="mt-12">
+            <SectionLabel icon={BookOpen}>
+              Publishing Studio
+            </SectionLabel>
+            <ChapterManagement comics={comics} />
+          </section>
 
-          <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-6 text-xs text-gray-500">
-            <span>ABYSSORA Administration</span>
-            <span>Secure admin area</span>
+          <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-[#c69aa1]/15 pt-6 text-xs text-[#89777c]">
+            <span className="font-display text-base tracking-[0.15em] text-[#c9b9bd]">
+              ABYSSORA
+            </span>
+            <span>Secure admin workspace</span>
           </div>
         </div>
       </section>

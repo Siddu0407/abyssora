@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -5,62 +6,134 @@ import {
   Compass, Home as HomeIcon, Sparkles, ArrowUpRight, Heart,
   Star, BookOpen, UserRound, LogOut, Play, Bell,
   Library as LibraryIcon, ArrowDownUp, SlidersHorizontal,
-  ShieldCheck,
+  ShieldCheck, Crown,
 } from 'lucide-react'
 
 import { supabase } from '../lib/supabase'
+
+const C = {
+  bg: '#110e10',
+  panel: '#191417',
+  surface: '#211a1e',
+  rose: '#c69aa1',
+  roseLight: '#dfb9bf',
+  ivory: '#f1e7e8',
+  muted: '#ad9da1',
+  dim: '#817277',
+  border: 'rgba(220,177,185,0.14)',
+}
 
 const genres = ['All', 'Action', 'Fantasy', 'Magic', 'Adventure', 'Drama']
 
 const genreDiscoveries = [
   {
     name: 'Action',
-    description: 'Epic battles, powerful heroes and nonstop thrills.',
+    description: 'Epic battles, powerful heroes and relentless thrills.',
     icon: Flame,
-    gradient: 'from-red-500/25 via-orange-500/10 to-transparent',
-    iconColor: 'text-orange-300',
-    glow: 'group-hover:shadow-orange-950/30',
+    tint: 'text-[#d89b87]',
+    glow: 'from-[#8c5146]/25',
   },
   {
     name: 'Fantasy',
-    description: 'Enter magical kingdoms and extraordinary worlds.',
+    description: 'Explore kingdoms beyond the ordinary.',
     icon: Sparkles,
-    gradient: 'from-violet-500/30 via-purple-500/10 to-transparent',
-    iconColor: 'text-violet-300',
-    glow: 'group-hover:shadow-purple-950/30',
+    tint: 'text-[#c6a6b9]',
+    glow: 'from-[#76566e]/25',
   },
   {
     name: 'Magic',
-    description: 'Discover spells, sorcery and mysterious powers.',
+    description: 'Discover spells, secrets and mysterious powers.',
     icon: Star,
-    gradient: 'from-blue-500/25 via-indigo-500/10 to-transparent',
-    iconColor: 'text-blue-300',
-    glow: 'group-hover:shadow-blue-950/30',
+    tint: 'text-[#b6a9c7]',
+    glow: 'from-[#625875]/25',
   },
   {
     name: 'Adventure',
-    description: 'Uncover secrets and explore the unknown.',
+    description: 'Uncover hidden places and unknown worlds.',
     icon: Compass,
-    gradient: 'from-emerald-500/25 via-teal-500/10 to-transparent',
-    iconColor: 'text-emerald-300',
-    glow: 'group-hover:shadow-emerald-950/30',
+    tint: 'text-[#a7b9a8]',
+    glow: 'from-[#526b5b]/25',
   },
   {
     name: 'Drama',
     description: 'Emotional journeys and unforgettable characters.',
     icon: Heart,
-    gradient: 'from-pink-500/25 via-fuchsia-500/10 to-transparent',
-    iconColor: 'text-pink-300',
-    glow: 'group-hover:shadow-pink-950/30',
+    tint: 'text-[#d39da8]',
+    glow: 'from-[#88515e]/25',
   },
 ]
 
+
+function Emblem({ size = 42 }) {
+  return (
+    <img
+      src="/abyssora-mark.svg"
+      alt="ABYSSORA"
+      width={size}
+      height={size}
+      className="object-contain"
+    />
+  )
+}
+
+
+
+function Brand({ compact = false }) {
+  return (
+    <Link to="/" className="group flex shrink-0 items-center gap-3">
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#c69aa1]/30 bg-[#211a1e] transition group-hover:border-[#c69aa1]/70">
+        <Emblem size={34} />
+      </div>
+
+      {!compact && (
+        <div className="leading-none">
+          <div className="font-display text-[25px] font-semibold tracking-[0.15em] text-[#f1e7e8] transition group-hover:text-[#dfb9bf]">
+            ABYSSORA
+          </div>
+
+          <div className="mt-1.5 font-sans text-[8px] font-semibold tracking-[0.32em] text-[#a88b91]">
+            WORLDS BEYOND STORIES
+          </div>
+        </div>
+      )}
+    </Link>
+  )
+}
+
+
+function Eyebrow({ icon: Icon, children }) {
+  return (
+    <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.24em] text-[#c69aa1]">
+      {Icon && <Icon size={14} />}
+      {children}
+    </div>
+  )
+}
+
+function SectionHeading({ eyebrow, title, description, icon: Icon, action }) {
+  return (
+    <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <Eyebrow icon={Icon}>{eyebrow}</Eyebrow>
+        <h2 className="text-2xl font-semibold tracking-tight text-[#f1e7e8] sm:text-3xl">
+          {title}
+        </h2>
+        {description && (
+          <p className="mt-2 text-sm text-[#99898e]">{description}</p>
+        )}
+      </div>
+      {action}
+    </div>
+  )
+}
+
 function MangaCard({ item, index, bookmarks, toggleBookmark }) {
   const [imageFailed, setImageFailed] = useState(false)
+  const isBookmarked = bookmarks.includes(item.id)
 
   return (
     <article className="group min-w-0">
-      <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-white/10 bg-[#171322] shadow-lg shadow-black/20 transition duration-300 group-hover:-translate-y-1 group-hover:border-purple-400/50 group-hover:shadow-purple-950/40">
+      <div className="relative aspect-[3/4] overflow-hidden rounded-xl border border-[#c69aa1]/15 bg-[#211a1e] transition duration-300 group-hover:-translate-y-1 group-hover:border-[#c69aa1]/50 group-hover:shadow-xl group-hover:shadow-black/30">
         <Link
           to={`/manga/${item.id}`}
           className="absolute inset-0 z-10"
@@ -73,26 +146,24 @@ function MangaCard({ item, index, bookmarks, toggleBookmark }) {
             alt={`${item.title} cover artwork`}
             loading="lazy"
             onError={() => setImageFailed(true)}
-            className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-110"
+            className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
           />
         ) : (
           <div className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br ${item.colors}`}>
-            <span className="text-7xl text-white/70 transition duration-500 group-hover:scale-125">
-              {item.symbol}
-            </span>
+            <span className="text-6xl text-[#f1e7e8]/60">{item.symbol}</span>
           </div>
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0c090b] via-black/5 to-black/20" />
 
         {index !== undefined && (
-          <span className="absolute left-2 top-2 z-20 rounded-md border border-white/10 bg-black/60 px-2 py-1 text-[9px] font-bold tracking-wider backdrop-blur-md">
+          <span className="absolute left-2 top-2 z-20 rounded-md border border-white/15 bg-black/60 px-2 py-1 text-[9px] font-bold tracking-wider text-white backdrop-blur">
             #{index + 1} TRENDING
           </span>
         )}
 
-        {item.status === 'Completed' && (
-          <span className="absolute left-2 top-2 z-20 rounded-md bg-emerald-600/90 px-2 py-1 text-[9px] font-bold">
+        {String(item.status || '').toLowerCase() === 'completed' && (
+          <span className="absolute left-2 top-2 z-20 rounded-md bg-[#657e6c]/90 px-2 py-1 text-[9px] font-bold text-white">
             COMPLETED
           </span>
         )}
@@ -100,33 +171,28 @@ function MangaCard({ item, index, bookmarks, toggleBookmark }) {
         <button
           onClick={() => toggleBookmark(item.id)}
           aria-label={`Bookmark ${item.title}`}
-          aria-pressed={bookmarks.includes(item.id)}
-          className="absolute right-2 top-2 z-30 rounded-lg border border-white/10 bg-black/60 p-2 text-white backdrop-blur-md transition hover:bg-purple-600"
+          aria-pressed={isBookmarked}
+          className="absolute right-2 top-2 z-30 rounded-lg border border-white/15 bg-black/60 p-2 text-white backdrop-blur transition hover:border-[#c69aa1] hover:bg-[#75545c]"
         >
           <Bookmark
             size={15}
-            fill={bookmarks.includes(item.id) ? 'currentColor' : 'none'}
-            className={bookmarks.includes(item.id) ? 'text-purple-300' : 'text-white'}
+            fill={isBookmarked ? 'currentColor' : 'none'}
+            className={isBookmarked ? 'text-[#dfb9bf]' : 'text-white'}
           />
         </button>
 
         <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-20 p-3">
-          <div className="mb-1 flex items-center gap-1 text-[10px] font-bold text-yellow-300">
-            <Star size={12} fill="currentColor" />
+          <div className="mb-1 flex items-center gap-1 text-[10px] font-semibold text-[#e6c99a]">
+            <Star size={11} fill="currentColor" />
             {item.rating}
           </div>
-
-          <h3 className="line-clamp-2 text-sm font-extrabold leading-snug">
+          <h3 className="line-clamp-2 text-sm font-bold leading-snug text-white">
             {item.title}
           </h3>
-
-          <p className="mt-1 text-[10px] text-gray-300">
-            {item.chapter}
-          </p>
+          <p className="mt-1 text-[10px] text-white/65">{item.chapter}</p>
         </div>
       </div>
-
-      <p className="mt-2 text-xs text-gray-500">{item.genre}</p>
+      <p className="mt-2 truncate text-xs text-[#95858a]">{item.genre || 'Manga'}</p>
     </article>
   )
 }
@@ -148,7 +214,7 @@ export default function Home() {
   const [loggingOut, setLoggingOut] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
 
-  // LOAD COMICS FROM SUPABASE
+  // LOAD MANGA
   useEffect(() => {
     let mounted = true
 
@@ -176,8 +242,10 @@ export default function Home() {
         chapters: item.chapters ?? 0,
         chapter: item.chapter || `Chapter ${item.chapters ?? 0}`,
         rating: String(item.rating ?? 0),
-        genres: item.genres || [item.genre],
-        colors: item.colors || 'from-violet-950 via-purple-800 to-slate-950',
+        genres: Array.isArray(item.genres)
+          ? item.genres
+          : [item.genre].filter(Boolean),
+        colors: item.colors || 'from-[#392b31] via-[#211a1e] to-[#110e10]',
         symbol: item.symbol || '✧',
       }))
 
@@ -198,10 +266,7 @@ export default function Home() {
 
     const getCurrentSession = async () => {
       const { data, error } = await supabase.auth.getSession()
-
-      if (!error && mounted) {
-        setUser(data.session?.user ?? null)
-      }
+      if (!error && mounted) setUser(data.session?.user ?? null)
     }
 
     getCurrentSession()
@@ -209,9 +274,7 @@ export default function Home() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) {
-        setUser(session?.user ?? null)
-      }
+      if (mounted) setUser(session?.user ?? null)
     })
 
     return () => {
@@ -220,13 +283,12 @@ export default function Home() {
     }
   }, [])
 
-  // CHECK ADMINISTRATOR PERMISSIONS
+  // ADMIN PERMISSIONS
   useEffect(() => {
     let mounted = true
 
     const checkAdmin = async () => {
       setIsAdmin(false)
-
       if (!user) return
 
       const { data, error } = await supabase
@@ -240,9 +302,7 @@ export default function Home() {
         return
       }
 
-      if (mounted) {
-        setIsAdmin(!!data)
-      }
+      if (mounted) setIsAdmin(!!data)
     }
 
     checkAdmin()
@@ -252,7 +312,7 @@ export default function Home() {
     }
   }, [user])
 
-  // LOAD UNREAD NOTIFICATIONS
+  // UNREAD NOTIFICATIONS
   useEffect(() => {
     let mounted = true
 
@@ -273,9 +333,7 @@ export default function Home() {
         return
       }
 
-      if (mounted) {
-        setUnreadCount(count || 0)
-      }
+      if (mounted) setUnreadCount(count || 0)
     }
 
     loadUnreadNotifications()
@@ -285,7 +343,7 @@ export default function Home() {
     }
   }, [user])
 
-  // LOAD BOOKMARKS
+  // BOOKMARKS
   useEffect(() => {
     let mounted = true
 
@@ -305,9 +363,7 @@ export default function Home() {
         return
       }
 
-      if (mounted) {
-        setBookmarks(data.map((item) => item.manga_id))
-      }
+      if (mounted) setBookmarks((data || []).map((item) => item.manga_id))
     }
 
     loadBookmarks()
@@ -317,7 +373,7 @@ export default function Home() {
     }
   }, [user])
 
-  // LOAD READING HISTORY
+  // READING HISTORY
   useEffect(() => {
     let mounted = true
 
@@ -338,18 +394,14 @@ export default function Home() {
 
       if (error) {
         console.error('Could not load reading history:', error.message)
-
         if (mounted) setLoadingHistory(false)
         return
       }
 
       if (mounted) {
-        const history = data
+        const history = (data || [])
           .map((entry) => {
-            const story = manga.find(
-              (item) => item.id === entry.manga_id
-            )
-
+            const story = manga.find((item) => item.id === entry.manga_id)
             if (!story) return null
 
             return {
@@ -372,11 +424,15 @@ export default function Home() {
     }
   }, [user, manga, loadingManga])
 
+  const username =
+    user?.user_metadata?.username ||
+    user?.email?.split('@')[0] ||
+    'Reader'
+
+  // LOGOUT
   const handleLogout = async () => {
     setLoggingOut(true)
-
     const { error } = await supabase.auth.signOut()
-
     setLoggingOut(false)
 
     if (error) {
@@ -387,11 +443,6 @@ export default function Home() {
     setMenuOpen(false)
     setUser(null)
   }
-
-  const username =
-    user?.user_metadata?.username ||
-    user?.email?.split('@')[0] ||
-    'Reader'
 
   // BOOKMARK HANDLER
   const toggleBookmark = async (id) => {
@@ -414,16 +465,11 @@ export default function Home() {
         return
       }
 
-      setBookmarks((current) =>
-        current.filter((item) => item !== id)
-      )
+      setBookmarks((current) => current.filter((item) => item !== id))
     } else {
       const { error } = await supabase
         .from('bookmarks')
-        .insert({
-          user_id: user.id,
-          manga_id: id,
-        })
+        .insert({ user_id: user.id, manga_id: id })
 
       if (error) {
         alert(`Could not save bookmark: ${error.message}`)
@@ -441,13 +487,15 @@ export default function Home() {
     const searchTerm = search.trim().toLowerCase()
 
     const results = manga.filter((item) => {
-      const itemGenres = item.genres || [item.genre]
+      const itemGenres = item.genres || [item.genre].filter(Boolean)
+      const title = String(item.title || '')
+      const genre = String(item.genre || '')
 
       const matchesSearch =
-        item.title.toLowerCase().includes(searchTerm) ||
-        item.genre.toLowerCase().includes(searchTerm) ||
-        itemGenres.some((genre) =>
-          genre.toLowerCase().includes(searchTerm)
+        title.toLowerCase().includes(searchTerm) ||
+        genre.toLowerCase().includes(searchTerm) ||
+        itemGenres.some((value) =>
+          String(value).toLowerCase().includes(searchTerm)
         )
 
       const matchesGenre =
@@ -457,21 +505,14 @@ export default function Home() {
     })
 
     return [...results].sort((a, b) => {
-      if (sortBy === 'rating') {
-        return Number(b.rating) - Number(a.rating)
-      }
-
-      if (sortBy === 'title') {
-        return a.title.localeCompare(b.title)
-      }
-
+      if (sortBy === 'rating') return Number(b.rating) - Number(a.rating)
+      if (sortBy === 'title') return a.title.localeCompare(b.title)
       if (sortBy === 'latest') {
         return (
-          Number(b.year) - Number(a.year) ||
-          Number(b.chapters) - Number(a.chapters)
+          Number(b.year || 0) - Number(a.year || 0) ||
+          Number(b.chapters || 0) - Number(a.chapters || 0)
         )
       }
-
       return 0
     })
   }, [manga, search, activeGenre, sortBy])
@@ -482,80 +523,63 @@ export default function Home() {
     setSortBy('rating')
   }
 
-  const hasActiveFilters =
-    search.trim() !== '' || activeGenre !== 'All'
+  const hasActiveFilters = search.trim() !== '' || activeGenre !== 'All'
+
+  const scrollTo = (id) => {
+    setMenuOpen(false)
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+  }
 
   return (
-    <div className="min-h-screen overflow-hidden bg-[#09090e] text-white">
+    <div className="min-h-screen overflow-hidden bg-[#110e10] text-[#f1e7e8]">
 
       {/* NAVIGATION */}
-      <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#09090e]/95 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-5 px-5 py-4 lg:px-10">
+      <header className="sticky top-0 z-50 border-b border-[#c69aa1]/10 bg-[#110e10]/95 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-5 px-5 py-3.5 lg:px-10">
+          <Brand />
 
-          <Link to="/" className="flex shrink-0 items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-violet-800 shadow-lg shadow-purple-900/30">
-              <Sparkles size={22} />
-            </div>
-
-            <span className="text-xl font-black tracking-[0.12em]">
-              ABYSS<span className="text-purple-400">ORA</span>
-            </span>
-          </Link>
-
-          <nav className="hidden items-center gap-8 text-sm text-gray-400 md:flex">
-            <Link to="/" className="flex items-center gap-2 text-white transition hover:text-purple-300">
-              <HomeIcon size={16} /> Home
+          <nav className="hidden items-center gap-7 text-[13px] font-medium text-[#a9959b] md:flex">
+            <Link to="/" className="flex items-center gap-2 text-[#f1e7e8] transition hover:text-[#dfb9bf]">
+              <HomeIcon size={15} /> Home
             </Link>
-
-            <a href="#trending" className="flex items-center gap-2 transition hover:text-purple-400">
-              <Flame size={16} /> Trending
-            </a>
-
-            <a href="#latest" className="flex items-center gap-2 transition hover:text-purple-400">
-              <Clock3 size={16} /> Latest
-            </a>
-
-            <a href="#explore" className="flex items-center gap-2 transition hover:text-purple-400">
-              <Compass size={16} /> Explore
-            </a>
+            <button onClick={() => scrollTo('trending')} className="flex items-center gap-2 transition hover:text-[#dfb9bf]">
+              <Flame size={15} /> Trending
+            </button>
+            <button onClick={() => scrollTo('latest')} className="flex items-center gap-2 transition hover:text-[#dfb9bf]">
+              <Clock3 size={15} /> Latest
+            </button>
+            <button onClick={() => scrollTo('explore')} className="flex items-center gap-2 transition hover:text-[#dfb9bf]">
+              <Compass size={15} /> Explore
+            </button>
 
             {user && (
-              <Link to="/library" className="flex items-center gap-2 text-purple-300 transition hover:text-purple-200">
-                <LibraryIcon size={16} /> My Library
+              <Link to="/library" className="flex items-center gap-2 transition hover:text-[#dfb9bf]">
+                <LibraryIcon size={15} /> My Library
               </Link>
             )}
 
             {isAdmin && (
-              <Link
-                to="/admin"
-                className="flex items-center gap-2 text-purple-300 transition hover:text-purple-200"
-              >
-                <ShieldCheck size={16} /> Admin
+              <Link to="/admin" className="flex items-center gap-2 text-[#dfb9bf] transition hover:text-white">
+                <ShieldCheck size={15} /> Admin
               </Link>
             )}
           </nav>
 
-          <div className="hidden items-center gap-3 sm:flex">
-            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 transition focus-within:border-purple-500/60">
-              <Search size={17} className="text-gray-500" />
-
+          <div className="hidden items-center gap-2 sm:flex">
+            <div className="flex items-center gap-2 rounded-xl border border-[#c69aa1]/15 bg-[#211a1e] px-3 py-2 focus-within:border-[#c69aa1]/50">
+              <Search size={16} className="text-[#89777c]" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    document.getElementById('explore')?.scrollIntoView({
-                      behavior: 'smooth',
-                    })
-                  }
+                  if (e.key === 'Enter') scrollTo('explore')
                 }}
                 placeholder="Search stories..."
-                className="w-36 bg-transparent text-sm outline-none placeholder:text-gray-600 lg:w-48"
+                className="w-32 bg-transparent text-xs text-[#f1e7e8] outline-none placeholder:text-[#76676c] lg:w-40"
               />
-
               {search && (
                 <button onClick={() => setSearch('')} aria-label="Clear search">
-                  <X size={15} />
+                  <X size={14} className="text-[#ad9da1]" />
                 </button>
               )}
             </div>
@@ -566,189 +590,187 @@ export default function Home() {
                   to="/notifications"
                   title="Notifications"
                   aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 transition hover:border-purple-400 hover:bg-purple-500/10"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-[#c69aa1]/15 transition hover:border-[#c69aa1]/50 hover:bg-[#211a1e]"
                 >
-                  <Bell size={19} className="text-purple-300" />
-
+                  <Bell size={17} className="text-[#c69aa1]" />
                   {unreadCount > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b66f7b] px-1 text-[9px] font-bold text-white">
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
                 </Link>
 
-                <Link to="/library" title="Open your library" className="flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-sm font-semibold text-purple-200 transition hover:border-purple-400 hover:bg-purple-500/20">
-                  <LibraryIcon size={17} /> Library
+                <Link to="/library" className="flex items-center gap-2 rounded-xl border border-[#c69aa1]/25 bg-[#c69aa1]/10 px-3 py-2 text-xs font-semibold text-[#dfb9bf] transition hover:bg-[#c69aa1]/20">
+                  <LibraryIcon size={15} /> Library
                 </Link>
 
-                <Link to="/profile" title="Open your profile" className="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 transition hover:border-purple-400 hover:bg-purple-500/10">
-                  <UserRound size={17} className="text-purple-300" />
-                  <span className="max-w-28 truncate text-sm font-semibold text-purple-200">
-                    {username}
-                  </span>
+                <Link to="/profile" className="flex items-center gap-2 rounded-xl border border-[#c69aa1]/15 px-3 py-2 transition hover:border-[#c69aa1]/40">
+                  <UserRound size={15} className="text-[#c69aa1]" />
+                  <span className="max-w-24 truncate text-xs font-semibold">{username}</span>
                 </Link>
 
-                <button onClick={handleLogout} disabled={loggingOut} className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold transition hover:border-red-500/50 hover:text-red-300 disabled:opacity-50">
-                  <LogOut size={16} />
+                <button
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="flex items-center gap-2 rounded-xl border border-[#c69aa1]/15 px-3 py-2 text-xs font-semibold text-[#ad9da1] transition hover:border-red-400/40 hover:text-red-300 disabled:opacity-50"
+                >
+                  <LogOut size={14} />
                   {loggingOut ? 'Logging out...' : 'Logout'}
                 </button>
               </>
             ) : (
               <>
-                <Link to="/login" className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold transition hover:border-purple-500 hover:text-purple-300">
+                <Link to="/login" className="rounded-xl border border-[#c69aa1]/20 px-4 py-2 text-xs font-semibold text-[#e4d5d8] transition hover:border-[#c69aa1]/60">
                   Sign in
                 </Link>
-
-                <Link to="/register" className="rounded-xl bg-purple-600 px-4 py-2 text-sm font-bold transition hover:bg-purple-500">
+                <Link to="/register" className="rounded-xl bg-[#c69aa1] px-4 py-2 text-xs font-bold text-[#211619] transition hover:bg-[#dfb9bf]">
                   Register
                 </Link>
               </>
             )}
           </div>
 
-          <button onClick={() => setMenuOpen(!menuOpen)} className="rounded-lg border border-white/10 p-2 transition hover:bg-white/10 md:hidden" aria-label="Toggle navigation">
-            {menuOpen ? <X size={21} /> : <Menu size={21} />}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="rounded-xl border border-[#c69aa1]/20 p-2 text-[#dfb9bf] transition hover:bg-[#211a1e] md:hidden"
+            aria-label="Toggle navigation"
+          >
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
         {/* MOBILE MENU */}
         {menuOpen && (
-          <div className="border-t border-white/10 bg-[#111019] p-5 md:hidden">
-            <div className="mb-4 flex items-center gap-2 rounded-xl border border-white/10 px-3 py-3">
-              <Search size={18} className="text-gray-500" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search stories..." className="w-full bg-transparent text-sm outline-none" />
-              {search && <button onClick={() => setSearch('')} aria-label="Clear search"><X size={16} /></button>}
+          <div className="border-t border-[#c69aa1]/10 bg-[#191417] p-5 md:hidden">
+            <div className="mb-4 flex items-center gap-2 rounded-xl border border-[#c69aa1]/15 bg-[#110e10] px-3 py-3">
+              <Search size={17} className="text-[#89777c]" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search stories..."
+                className="w-full bg-transparent text-sm outline-none placeholder:text-[#76676c]"
+              />
+              {search && <button onClick={() => setSearch('')} aria-label="Clear search"><X size={15} /></button>}
             </div>
 
-            <Link to="/" onClick={() => setMenuOpen(false)} className="block border-b border-white/[0.06] py-3 text-gray-300 transition hover:text-purple-300">Home</Link>
-            <a href="#trending" onClick={() => setMenuOpen(false)} className="block border-b border-white/[0.06] py-3 text-gray-300 transition hover:text-purple-300">Trending</a>
-            <a href="#latest" onClick={() => setMenuOpen(false)} className="block border-b border-white/[0.06] py-3 text-gray-300 transition hover:text-purple-300">Latest</a>
-            <a href="#explore" onClick={() => setMenuOpen(false)} className="block border-b border-white/[0.06] py-3 text-gray-300 transition hover:text-purple-300">Explore</a>
+            <button onClick={() => scrollTo('trending')} className="block w-full border-b border-[#c69aa1]/10 py-3 text-left text-sm text-[#c8b9bd]">Trending</button>
+            <button onClick={() => scrollTo('latest')} className="block w-full border-b border-[#c69aa1]/10 py-3 text-left text-sm text-[#c8b9bd]">Latest</button>
+            <button onClick={() => scrollTo('explore')} className="block w-full border-b border-[#c69aa1]/10 py-3 text-left text-sm text-[#c8b9bd]">Explore</button>
 
             {user ? (
-              <div className="mt-4">
-                <Link
-                  to="/notifications"
-                  onClick={() => setMenuOpen(false)}
-                  className="mb-3 flex items-center gap-3 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-3 text-purple-200 transition hover:bg-purple-500/20"
-                >
-                  <Bell size={18} />
-                  <span className="text-sm font-semibold">Notifications</span>
-
-                  {unreadCount > 0 && (
-                    <span className="ml-auto rounded-full bg-red-500 px-2 py-1 text-[10px] font-bold text-white">
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </span>
-                  )}
+              <div className="mt-4 space-y-3">
+                <Link to="/notifications" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-xl border border-[#c69aa1]/15 p-3 text-sm text-[#dfb9bf]">
+                  <Bell size={17} /> Notifications
+                  {unreadCount > 0 && <span className="ml-auto rounded-full bg-[#b66f7b] px-2 py-1 text-[10px] text-white">{unreadCount}</span>}
                 </Link>
-
-                <Link to="/library" onClick={() => setMenuOpen(false)} className="mb-3 flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-3 text-purple-200 transition hover:bg-purple-500/20">
-                  <LibraryIcon size={18} />
-                  <span className="text-sm font-semibold">My Library</span>
-                  <span className="ml-auto text-xs text-purple-400">Open library</span>
+                <Link to="/library" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-xl border border-[#c69aa1]/15 p-3 text-sm text-[#dfb9bf]">
+                  <LibraryIcon size={17} /> My Library
                 </Link>
-
                 {isAdmin && (
-                  <Link
-                    to="/admin"
-                    onClick={() => setMenuOpen(false)}
-                    className="mb-3 flex items-center gap-3 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-3 text-purple-200 transition hover:bg-purple-500/20"
-                  >
-                    <ShieldCheck size={18} />
-                    <span className="text-sm font-semibold">Admin Dashboard</span>
+                  <Link to="/admin" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-xl border border-[#c69aa1]/15 p-3 text-sm text-[#dfb9bf]">
+                    <ShieldCheck size={17} /> Admin Dashboard
                   </Link>
                 )}
-
-                <Link to="/profile" onClick={() => setMenuOpen(false)} className="mb-3 flex items-center gap-2 rounded-xl border border-white/10 px-3 py-3 text-gray-300 transition hover:border-purple-500/40 hover:text-purple-200">
-                  <UserRound size={18} />
-                  <span className="truncate text-sm font-semibold">{username}</span>
-                  <span className="ml-auto text-xs text-gray-500">View profile</span>
+                <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-xl border border-[#c69aa1]/15 p-3 text-sm text-[#c8b9bd]">
+                  <UserRound size={17} /> {username}
                 </Link>
-
-                <button onClick={handleLogout} disabled={loggingOut} className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 px-4 py-3 text-sm font-semibold text-red-300 hover:bg-red-500/10 disabled:opacity-50">
-                  <LogOut size={17} />
-                  {loggingOut ? 'Logging out...' : 'Logout'}
+                <button onClick={handleLogout} disabled={loggingOut} className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/20 p-3 text-sm text-red-300 disabled:opacity-50">
+                  <LogOut size={16} /> {loggingOut ? 'Logging out...' : 'Logout'}
                 </button>
               </div>
             ) : (
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <Link to="/login" onClick={() => setMenuOpen(false)} className="rounded-xl border border-white/10 px-4 py-3 text-center text-sm font-semibold hover:border-purple-500">Sign in</Link>
-                <Link to="/register" onClick={() => setMenuOpen(false)} className="rounded-xl bg-purple-600 px-4 py-3 text-center text-sm font-bold hover:bg-purple-500">Register</Link>
+                <Link to="/login" onClick={() => setMenuOpen(false)} className="rounded-xl border border-[#c69aa1]/20 px-4 py-3 text-center text-sm font-semibold">Sign in</Link>
+                <Link to="/register" onClick={() => setMenuOpen(false)} className="rounded-xl bg-[#c69aa1] px-4 py-3 text-center text-sm font-bold text-[#211619]">Register</Link>
               </div>
             )}
           </div>
         )}
       </header>
 
-      <main className="mx-auto max-w-[1440px] px-5 pb-20 lg:px-10">
+      <main className="mx-auto max-w-[1440px] px-5 pb-24 lg:px-10">
 
         {/* HERO */}
-        <section className="relative mt-8 overflow-hidden rounded-[28px] border border-purple-500/20 bg-gradient-to-br from-[#251345] via-[#171127] to-[#0e0d15] px-7 py-14 shadow-2xl shadow-purple-950/10 md:px-14 md:py-20">
-          <div className="pointer-events-none absolute -right-20 -top-32 h-96 w-96 rounded-full bg-purple-600/20 blur-[100px]" />
-          <div className="pointer-events-none absolute -bottom-40 right-1/4 h-80 w-80 rounded-full bg-fuchsia-600/10 blur-[100px]" />
+        <section className="relative mt-7 min-h-[420px] overflow-hidden rounded-[26px] border border-[#c69aa1]/20 bg-[#191417] md:min-h-[470px]">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_40%,rgba(156,103,116,0.17),transparent_50%),linear-gradient(115deg,#21191d_0%,#171215_55%,#110e10_100%)]" />
+          <div className="absolute -right-20 -top-32 h-96 w-96 rounded-full border border-[#c69aa1]/10" />
+          <div className="absolute -right-8 -top-20 h-72 w-72 rounded-full border border-[#c69aa1]/10" />
+          <div className="absolute bottom-[-150px] right-[18%] h-80 w-80 rounded-full bg-[#9e6674]/10 blur-[90px]" />
 
-          <div className="relative z-10 max-w-2xl">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-purple-400/30 bg-purple-400/10 px-4 py-2 text-xs font-semibold tracking-wider text-purple-300">
-              <Sparkles size={14} />
-              YOUR NEXT OBSESSION STARTS HERE
-            </div>
+          <div className="relative z-10 flex min-h-[420px] items-center px-7 py-14 md:min-h-[470px] md:px-14 lg:px-20">
+            <div className="max-w-2xl">
+              <div className="mb-7 inline-flex items-center gap-3 rounded-full border border-[#c69aa1]/25 bg-[#c69aa1]/[0.07] px-4 py-2">
+                <Emblem size={18} />
+                <span className="text-[9px] font-bold tracking-[0.24em] text-[#dfb9bf]">
+                  WORLDS BEYOND STORIES
+                </span>
+              </div>
 
-            <h1 className="text-4xl font-black leading-tight tracking-tight sm:text-6xl lg:text-7xl">
-              Escape into
-              <br />
-              <span className="bg-gradient-to-r from-purple-300 via-fuchsia-400 to-purple-500 bg-clip-text text-transparent">
-                endless stories.
-              </span>
-            </h1>
+              <h1 className="text-4xl font-semibold leading-[1.12] tracking-tight text-[#f1e7e8] sm:text-6xl lg:text-7xl">
+                Every story has
+                <br />
+                <span className="font-serif italic text-[#c69aa1]">a universe.</span>
+              </h1>
 
-            <p className="mt-6 max-w-lg text-base leading-7 text-gray-400 md:text-lg">
-              Discover incredible worlds, unforgettable characters
-              and stories worth staying up for.
-            </p>
+              <p className="mt-6 max-w-lg text-sm leading-7 text-[#ad9da1] md:text-base">
+                Step into extraordinary worlds, follow unforgettable
+                characters and discover the stories that stay with you.
+              </p>
 
-            <div className="mt-9 flex flex-wrap gap-3">
-              <a href="#explore" className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-6 py-3.5 text-sm font-bold shadow-lg shadow-purple-950/30 transition hover:-translate-y-1 hover:bg-purple-500">
-                Explore library <ArrowUpRight size={17} />
-              </a>
+              <div className="mt-9 flex flex-wrap gap-3">
+                <button
+                  onClick={() => scrollTo('explore')}
+                  className="inline-flex items-center gap-3 rounded-xl bg-[#c69aa1] px-6 py-3.5 text-sm font-bold text-[#211619] transition hover:-translate-y-0.5 hover:bg-[#dfb9bf]"
+                >
+                  Explore the library <ArrowUpRight size={17} />
+                </button>
+                <button
+                  onClick={() => scrollTo('trending')}
+                  className="rounded-xl border border-[#c69aa1]/25 bg-white/[0.025] px-6 py-3.5 text-sm font-semibold text-[#e4d5d8] transition hover:border-[#c69aa1]/60 hover:bg-white/[0.06]"
+                >
+                  Discover trending
+                </button>
+              </div>
 
-              <a href="#trending" className="rounded-xl border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-semibold transition hover:bg-white/10">
-                Discover trending
-              </a>
+              <div className="mt-10 flex items-center gap-4 text-[10px] font-semibold uppercase tracking-[0.17em] text-[#89777c]">
+                <span className="h-px w-9 bg-[#c69aa1]/60" />
+                Your next chapter begins here
+              </div>
             </div>
           </div>
 
-          <div className="pointer-events-none absolute bottom-0 right-8 hidden h-full w-1/3 items-center justify-center md:flex">
-            <div className="flex h-64 w-64 rotate-12 items-center justify-center rounded-full border border-purple-400/20 bg-purple-500/[0.06] text-8xl text-purple-300/70 shadow-2xl shadow-purple-900/20">
-              ✧
+          <div className="pointer-events-none absolute bottom-10 right-12 hidden opacity-70 lg:block">
+            <div className="flex h-52 w-52 items-center justify-center rounded-full border border-[#c69aa1]/20 bg-[#c69aa1]/[0.025]">
+              <div className="flex h-40 w-40 items-center justify-center rounded-full border border-[#c69aa1]/25">
+                <Emblem size={112} />
+              </div>
             </div>
           </div>
         </section>
 
         {/* CONTINUE READING */}
         {user && (loadingHistory || readingHistory.length > 0) && (
-          <section className="mt-12">
-            <div className="mb-6 flex items-end justify-between gap-4">
-              <div>
-                <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-purple-400">
-                  <BookOpen size={15} /> Pick up where you left off
-                </div>
-                <h2 className="text-2xl font-extrabold sm:text-3xl">Continue reading</h2>
-                <p className="mt-2 text-sm text-gray-500">Your latest reading progress, saved automatically.</p>
-              </div>
-
-              <Link to="/library" className="hidden items-center gap-2 text-sm font-semibold text-purple-300 transition hover:text-purple-200 sm:flex">
-                View all <ChevronRight size={16} />
-              </Link>
-            </div>
+          <section className="mt-14">
+            <SectionHeading
+              eyebrow="Pick up where you left off"
+              title="Continue reading"
+              description="Your reading journey, right where you left it."
+              icon={BookOpen}
+              action={
+                <Link to="/library" className="hidden items-center gap-1 text-xs font-semibold text-[#c69aa1] transition hover:text-[#dfb9bf] sm:flex">
+                  View library <ChevronRight size={15} />
+                </Link>
+              }
+            />
 
             {loadingHistory ? (
-              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-8 text-center text-sm text-gray-500">
+              <div className="rounded-2xl border border-[#c69aa1]/10 bg-[#191417] p-8 text-center text-sm text-[#95858a]">
                 Loading your reading history...
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {readingHistory.map((item) => (
-                  <article key={item.id} className="group flex min-w-0 gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 transition hover:border-purple-500/40 hover:bg-purple-500/[0.04]">
+                  <article key={item.id} className="flex min-w-0 gap-4 rounded-2xl border border-[#c69aa1]/12 bg-[#191417] p-4 transition hover:border-[#c69aa1]/35">
                     <Link to={`/manga/${item.id}`} className={`relative flex h-32 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${item.colors}`}>
                       {item.coverImage ? (
                         <img src={item.coverImage} alt={`${item.title} cover`} loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} className="absolute inset-0 h-full w-full object-cover" />
@@ -756,16 +778,14 @@ export default function Home() {
                         <span className="text-4xl text-white/70">{item.symbol}</span>
                       )}
                     </Link>
-
                     <div className="flex min-w-0 flex-1 flex-col justify-between">
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400">{item.genre}</p>
-                        <Link to={`/manga/${item.id}`} className="mt-1 line-clamp-2 text-sm font-bold transition group-hover:text-purple-300">{item.title}</Link>
-                        <p className="mt-2 text-xs text-gray-400">Last read: Chapter {item.lastReadChapter}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#c69aa1]">{item.genre}</p>
+                        <Link to={`/manga/${item.id}`} className="mt-1 line-clamp-2 text-sm font-bold transition hover:text-[#dfb9bf]">{item.title}</Link>
+                        <p className="mt-2 text-xs text-[#95858a]">Last read: Chapter {item.lastReadChapter}</p>
                       </div>
-
-                      <Link to={`/manga/${item.id}/chapter/${item.lastReadChapter}`} className="mt-3 inline-flex w-fit items-center gap-2 rounded-lg bg-purple-600 px-3 py-2 text-xs font-bold transition hover:bg-purple-500">
-                        <Play size={13} fill="currentColor" /> Continue
+                      <Link to={`/manga/${item.id}/chapter/${item.lastReadChapter}`} className="mt-3 inline-flex w-fit items-center gap-2 rounded-lg bg-[#c69aa1]/15 px-3 py-2 text-xs font-bold text-[#dfb9bf] transition hover:bg-[#c69aa1]/25">
+                        <Play size={12} fill="currentColor" /> Continue
                       </Link>
                     </div>
                   </article>
@@ -776,66 +796,68 @@ export default function Home() {
         )}
 
         {/* FEATURE STRIP */}
-        <section className="my-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <section className="my-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             [Compass, 'Discover', 'New worlds'],
             [Sparkles, 'Explore', 'Every genre'],
             [Heart, 'Save', 'Your favourites'],
             [BookOpen, 'Enjoy', 'Your next read'],
           ].map(([Icon, heading, sub]) => (
-            <div key={heading} className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4 transition hover:border-purple-500/30 hover:bg-purple-500/[0.04]">
-              <Icon size={19} className="mb-3 text-purple-400" />
-              <p className="font-bold text-white">{heading}</p>
-              <p className="mt-1 text-xs text-gray-500">{sub}</p>
+            <div key={heading} className="flex items-center gap-3 rounded-xl border border-[#c69aa1]/10 bg-[#191417] p-4 transition hover:border-[#c69aa1]/30">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#c69aa1]/10 text-[#c69aa1]">
+                <Icon size={18} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#e9dcde]">{heading}</p>
+                <p className="mt-1 text-[11px] text-[#89777c]">{sub}</p>
+              </div>
             </div>
           ))}
         </section>
 
         {/* GENRE DISCOVERY */}
         <section id="genres" className="mt-16 scroll-mt-28">
-          <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-purple-400">
-                <Sparkles size={15} /> Find your favourite world
-              </div>
-              <h2 className="text-2xl font-extrabold sm:text-3xl">Explore by genre</h2>
-              <p className="mt-2 text-sm text-gray-500">Pick a genre and discover your next obsession.</p>
-            </div>
-
-            <Link to="/" onClick={() => { setActiveGenre('All'); setSearch('') }} className="flex items-center gap-1 text-sm font-semibold text-purple-300 transition hover:text-purple-200">
-              View all manga <ArrowUpRight size={16} />
-            </Link>
-          </div>
+          <SectionHeading
+            eyebrow="Find your favourite world"
+            title="Explore by genre"
+            description="Choose a world. Find a story worth remembering."
+            icon={Sparkles}
+            action={
+              <button onClick={() => { setActiveGenre('All'); setSearch(''); scrollTo('explore') }} className="flex items-center gap-1 text-xs font-semibold text-[#c69aa1] transition hover:text-[#dfb9bf]">
+                View all manga <ArrowUpRight size={15} />
+              </button>
+            }
+          />
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {genreDiscoveries.map((genre) => {
               const Icon = genre.icon
-
               const count = manga.filter((item) =>
-                (item.genres || [item.genre]).some(
-                  (itemGenre) => itemGenre.toLowerCase() === genre.name.toLowerCase()
+                (item.genres || [item.genre].filter(Boolean)).some(
+                  (value) => String(value).toLowerCase() === genre.name.toLowerCase()
                 )
               ).length
 
               return (
-                <Link key={genre.name} to={`/genre/${genre.name.toLowerCase()}`} className={`group relative min-h-48 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111019] p-5 shadow-lg shadow-black/10 transition duration-300 hover:-translate-y-1 hover:border-white/20 hover:shadow-2xl ${genre.glow}`}>
-                  <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${genre.gradient} opacity-80 transition duration-300 group-hover:opacity-100`} />
-                  <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/[0.03] blur-2xl transition duration-500 group-hover:scale-150" />
-
+                <Link
+                  key={genre.name}
+                  to={`/genre/${genre.name.toLowerCase()}`}
+                  className="group relative min-h-48 overflow-hidden rounded-2xl border border-[#c69aa1]/12 bg-[#191417] p-5 transition duration-300 hover:-translate-y-1 hover:border-[#c69aa1]/40"
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-br ${genre.glow} to-transparent opacity-80 transition group-hover:opacity-100`} />
+                  <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/[0.025] blur-2xl transition group-hover:scale-150" />
                   <div className="relative z-10 flex h-full flex-col">
                     <div className="mb-5 flex items-start justify-between">
-                      <div className={`flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-black/20 ${genre.iconColor}`}>
-                        <Icon size={22} />
+                      <div className={`flex h-11 w-11 items-center justify-center rounded-xl border border-[#c69aa1]/15 bg-[#110e10]/50 ${genre.tint}`}>
+                        <Icon size={21} />
                       </div>
-                      <ArrowUpRight size={18} className="text-gray-500 transition duration-300 group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:text-white" />
+                      <ArrowUpRight size={17} className="text-[#76676c] transition group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-[#dfb9bf]" />
                     </div>
-
-                    <h3 className="text-lg font-extrabold tracking-tight">{genre.name}</h3>
-                    <p className="mt-2 min-h-10 text-xs leading-5 text-gray-400">{genre.description}</p>
-
+                    <h3 className="text-lg font-semibold text-[#f1e7e8]">{genre.name}</h3>
+                    <p className="mt-2 min-h-10 text-xs leading-5 text-[#99898e]">{genre.description}</p>
                     <div className="mt-auto flex items-center gap-2 pt-4">
-                      <span className={`text-sm font-bold ${genre.iconColor}`}>{count}</span>
-                      <span className="text-[11px] text-gray-500">manga available</span>
+                      <span className={`text-sm font-bold ${genre.tint}`}>{count}</span>
+                      <span className="text-[10px] text-[#817277]">manga available</span>
                     </div>
                   </div>
                 </Link>
@@ -845,66 +867,100 @@ export default function Home() {
         </section>
 
         {/* TRENDING */}
-        <section id="trending" className="mt-14 scroll-mt-28">
-          <div className="mb-7">
-            <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-purple-400">
-              <Flame size={15} /> Popular right now
-            </div>
-            <h2 className="text-2xl font-extrabold sm:text-3xl">Trending stories</h2>
-            <p className="mt-2 text-sm text-gray-500">Discover stories worth adding to your reading list.</p>
-          </div>
+        <section id="trending" className="mt-16 scroll-mt-28">
+          <SectionHeading
+            eyebrow="Popular right now"
+            title="Trending stories"
+            description="Stories readers can't stop coming back to."
+            icon={Flame}
+          />
 
           {loadingManga ? (
-            <p className="rounded-2xl border border-white/10 p-8 text-center text-sm text-gray-400">Loading comics from ABYSSORA...</p>
+            <p className="rounded-2xl border border-[#c69aa1]/10 bg-[#191417] p-8 text-center text-sm text-[#95858a]">
+              Loading comics from ABYSSORA...
+            </p>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-              {[...manga].sort((a, b) => Number(b.rating) - Number(a.rating)).map((item, index) => (
-                <MangaCard key={item.id} item={item} index={index} bookmarks={bookmarks} toggleBookmark={toggleBookmark} />
-              ))}
+              {[...manga]
+                .sort((a, b) => Number(b.rating) - Number(a.rating))
+                .map((item, index) => (
+                  <MangaCard
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    bookmarks={bookmarks}
+                    toggleBookmark={toggleBookmark}
+                  />
+                ))}
             </div>
           )}
         </section>
 
-        {/* EXPLORE */}
+        {/* EXPLORE LIBRARY */}
         <section id="explore" className="mt-16 scroll-mt-28">
-          <div className="mb-7">
-            <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-purple-400">
-              <Compass size={15} /> Find your next read
-            </div>
-            <h2 className="text-2xl font-extrabold sm:text-3xl">Explore the library</h2>
-            <p className="mt-2 text-sm text-gray-500">Find something that matches your mood.</p>
-          </div>
+          <SectionHeading
+            eyebrow="Find your next read"
+            title="Explore the library"
+            description="A universe of stories, waiting to be discovered."
+            icon={Compass}
+          />
 
           <div className="mb-5 grid gap-3 sm:grid-cols-[1fr_auto]">
-            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 transition focus-within:border-purple-500/60">
-              <Search size={19} className="shrink-0 text-gray-500" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by manga title or genre..." className="w-full bg-transparent text-sm outline-none placeholder:text-gray-600" />
-              {search && <button onClick={() => setSearch('')} aria-label="Clear search" className="text-gray-500 transition hover:text-white"><X size={17} /></button>}
+            <div className="flex items-center gap-3 rounded-xl border border-[#c69aa1]/15 bg-[#191417] px-4 py-3 transition focus-within:border-[#c69aa1]/50">
+              <Search size={18} className="shrink-0 text-[#89777c]" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by manga title or genre..."
+                className="w-full bg-transparent text-sm text-[#f1e7e8] outline-none placeholder:text-[#76676c]"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} aria-label="Clear search" className="text-[#89777c] hover:text-white">
+                  <X size={16} />
+                </button>
+              )}
             </div>
 
-            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-              <ArrowDownUp size={17} className="shrink-0 text-purple-400" />
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sort manga" className="w-full cursor-pointer bg-transparent text-sm text-gray-300 outline-none sm:w-44">
-                <option value="rating" className="bg-[#171322]">Highest rated</option>
-                <option value="latest" className="bg-[#171322]">Latest</option>
-                <option value="title" className="bg-[#171322]">Title: A–Z</option>
+            <div className="flex items-center gap-2 rounded-xl border border-[#c69aa1]/15 bg-[#191417] px-4 py-3">
+              <ArrowDownUp size={16} className="shrink-0 text-[#c69aa1]" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                aria-label="Sort manga"
+                className="w-full cursor-pointer bg-transparent text-sm text-[#c8b9bd] outline-none sm:w-40"
+              >
+                <option value="rating" className="bg-[#191417]">Highest rated</option>
+                <option value="latest" className="bg-[#191417]">Latest</option>
+                <option value="title" className="bg-[#191417]">Title: A–Z</option>
               </select>
             </div>
           </div>
 
           <div className="mb-6">
-            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-              <SlidersHorizontal size={14} /> Filter by genre
+            <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#89777c]">
+              <SlidersHorizontal size={13} /> Filter by genre
             </div>
-
             <div className="flex flex-wrap gap-2">
               {genres.map((genre) => (
                 genre === 'All' ? (
-                  <button key={genre} onClick={() => setActiveGenre('All')} aria-pressed={activeGenre === 'All'} className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${activeGenre === 'All' ? 'border-purple-500 bg-purple-600 text-white shadow-lg shadow-purple-950/30' : 'border-white/10 bg-white/[0.03] text-gray-400 hover:border-purple-400/50 hover:text-white'}`}>
+                  <button
+                    key={genre}
+                    onClick={() => setActiveGenre('All')}
+                    aria-pressed={activeGenre === 'All'}
+                    className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
+                      activeGenre === 'All'
+                        ? 'border-[#c69aa1] bg-[#c69aa1] text-[#211619]'
+                        : 'border-[#c69aa1]/15 bg-[#191417] text-[#ad9da1] hover:border-[#c69aa1]/50 hover:text-[#f1e7e8]'
+                    }`}
+                  >
                     All
                   </button>
                 ) : (
-                  <Link key={genre} to={`/genre/${genre.toLowerCase()}`} className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-semibold text-gray-400 transition hover:border-purple-400/50 hover:bg-purple-600 hover:text-white">
+                  <Link
+                    key={genre}
+                    to={`/genre/${genre.toLowerCase()}`}
+                    className="rounded-full border border-[#c69aa1]/15 bg-[#191417] px-4 py-2 text-xs font-semibold text-[#ad9da1] transition hover:border-[#c69aa1]/50 hover:text-[#dfb9bf]"
+                  >
                     {genre}
                   </Link>
                 )
@@ -912,40 +968,45 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] pb-4">
-            <p className="text-sm text-gray-400">
-              Showing <span className="font-bold text-white">{filteredManga.length}</span> of <span className="font-bold text-white">{manga.length}</span> manga
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-[#c69aa1]/10 pb-4">
+            <p className="text-xs text-[#95858a]">
+              Showing <span className="font-bold text-[#f1e7e8]">{filteredManga.length}</span> of{' '}
+              <span className="font-bold text-[#f1e7e8]">{manga.length}</span> manga
             </p>
-
             {hasActiveFilters && (
-              <button onClick={clearFilters} className="flex items-center gap-2 text-xs font-semibold text-purple-300 transition hover:text-purple-200">
-                <X size={14} /> Clear filters
+              <button onClick={clearFilters} className="flex items-center gap-2 text-xs font-semibold text-[#c69aa1] transition hover:text-[#dfb9bf]">
+                <X size={13} /> Clear filters
               </button>
             )}
           </div>
 
           {loadingManga ? (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-12 text-center text-sm text-gray-400">
+            <div className="rounded-2xl border border-[#c69aa1]/10 bg-[#191417] p-12 text-center text-sm text-[#95858a]">
               Loading your library...
             </div>
           ) : mangaError ? (
-            <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-8 text-center">
+            <div className="rounded-2xl border border-red-400/20 bg-red-400/5 p-8 text-center">
               <p className="font-semibold text-red-300">Unable to load comics</p>
-              <p className="mt-2 break-words text-sm text-gray-400">{mangaError}</p>
+              <p className="mt-2 break-words text-sm text-[#ad9da1]">{mangaError}</p>
             </div>
           ) : filteredManga.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-12 text-center">
-              <Search size={30} className="mx-auto text-gray-600" />
-              <p className="mt-4 font-semibold text-gray-300">No stories found.</p>
-              <p className="mt-2 text-sm text-gray-500">We couldn't find a manga matching your search. Try another title or genre.</p>
-              <button onClick={clearFilters} className="mt-5 rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-semibold transition hover:bg-purple-500">
+            <div className="rounded-2xl border border-[#c69aa1]/10 bg-[#191417] p-12 text-center">
+              <Search size={28} className="mx-auto text-[#76676c]" />
+              <p className="mt-4 font-semibold text-[#e4d5d8]">No stories found.</p>
+              <p className="mt-2 text-sm text-[#89777c]">Try another title or genre.</p>
+              <button onClick={clearFilters} className="mt-5 rounded-xl bg-[#c69aa1] px-5 py-2.5 text-sm font-bold text-[#211619] transition hover:bg-[#dfb9bf]">
                 Clear filters
               </button>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
               {filteredManga.map((item) => (
-                <MangaCard key={item.id} item={item} bookmarks={bookmarks} toggleBookmark={toggleBookmark} />
+                <MangaCard
+                  key={item.id}
+                  item={item}
+                  bookmarks={bookmarks}
+                  toggleBookmark={toggleBookmark}
+                />
               ))}
             </div>
           )}
@@ -953,52 +1014,86 @@ export default function Home() {
 
         {/* LATEST UPDATES */}
         <section id="latest" className="mt-16 scroll-mt-28">
-          <div className="mb-7">
-            <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-purple-400">
-              <Clock3 size={15} /> Freshly updated
-            </div>
-            <h2 className="text-2xl font-extrabold sm:text-3xl">Latest updates</h2>
-          </div>
+          <SectionHeading
+            eyebrow="Freshly updated"
+            title="Latest updates"
+            description="The latest chapters from your library."
+            icon={Clock3}
+          />
 
-          <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
+          <div className="overflow-hidden rounded-2xl border border-[#c69aa1]/10 bg-[#191417]">
             {[...manga]
               .sort((a, b) => Number(b.chapters) - Number(a.chapters))
               .slice(0, 5)
               .map((item, index, list) => (
-                <Link key={item.id} to={`/manga/${item.id}`} className={`group flex items-center gap-4 p-4 transition hover:bg-purple-500/[0.05] ${index !== list.length - 1 ? 'border-b border-white/[0.06]' : ''}`}>
+                <Link
+                  key={item.id}
+                  to={`/manga/${item.id}`}
+                  className={`group flex items-center gap-4 p-4 transition hover:bg-[#c69aa1]/[0.045] ${
+                    index !== list.length - 1 ? 'border-b border-[#c69aa1]/10' : ''
+                  }`}
+                >
                   <div className={`relative flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br ${item.colors}`}>
-                    <img src={item.coverImage} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} className="absolute inset-0 h-full w-full object-cover" />
-                    <span className="text-xl text-white/80">{item.symbol}</span>
+                    {item.coverImage && (
+                      <img
+                        src={item.coverImage}
+                        alt=""
+                        loading="lazy"
+                        onError={(e) => { e.currentTarget.style.display = 'none' }}
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    )}
+                    {!item.coverImage && <span className="text-xl text-white/80">{item.symbol}</span>}
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-sm font-bold transition group-hover:text-purple-300">{item.title}</h3>
-                    <p className="mt-1 text-xs text-gray-500">{item.genre}</p>
+                    <h3 className="truncate text-sm font-semibold text-[#e9dcde] transition group-hover:text-[#dfb9bf]">
+                      {item.title}
+                    </h3>
+                    <p className="mt-1 text-xs text-[#89777c]">{item.genre || 'Manga'}</p>
                   </div>
 
                   <div className="text-right">
-                    <p className="text-xs font-semibold text-purple-300">{item.chapter}</p>
-                    <p className="mt-1 text-[10px] text-gray-500">Latest chapter</p>
+                    <p className="text-xs font-semibold text-[#c69aa1]">{item.chapter}</p>
+                    <p className="mt-1 text-[9px] text-[#817277]">Latest chapter</p>
                   </div>
 
-                  <ChevronRight size={17} className="shrink-0 text-gray-600 transition group-hover:translate-x-1 group-hover:text-purple-400" />
+                  <ChevronRight size={16} className="shrink-0 text-[#76676c] transition group-hover:translate-x-1 group-hover:text-[#c69aa1]" />
                 </Link>
               ))}
+
+            {!loadingManga && manga.length === 0 && (
+              <p className="p-8 text-center text-sm text-[#89777c]">No manga has been added yet.</p>
+            )}
+          </div>
+        </section>
+
+        {/* CLOSING BANNER */}
+        <section className="relative mt-16 overflow-hidden rounded-2xl border border-[#c69aa1]/15 bg-[#191417] px-7 py-10 text-center md:py-14">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(198,154,161,0.09),transparent_65%)]" />
+          <div className="relative">
+            <div className="mb-4 flex justify-center"><Emblem size={45} /></div>
+            <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-[#c69aa1]">ABYSSORA</p>
+            <h2 className="mt-3 font-serif text-3xl italic text-[#f1e7e8] sm:text-4xl">
+              There is always another world.
+            </h2>
+            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#99898e]">
+              Your next favourite story might be one chapter away.
+            </p>
+            <button onClick={() => scrollTo('explore')} className="mt-7 inline-flex items-center gap-2 rounded-xl border border-[#c69aa1]/30 px-5 py-3 text-xs font-bold text-[#dfb9bf] transition hover:bg-[#c69aa1]/10">
+              Find your next story <ArrowUpRight size={15} />
+            </button>
           </div>
         </section>
       </main>
 
       {/* FOOTER */}
-      <footer className="border-t border-white/[0.07] bg-[#07070b]">
-        <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-between gap-4 px-5 py-8 sm:flex-row lg:px-10">
-          <div>
-            <div className="text-lg font-black tracking-[0.15em]">
-              ABYSS<span className="text-purple-400">ORA</span>
-            </div>
-            <p className="mt-1 text-xs text-gray-600">A universe of stories awaits.</p>
+      <footer className="mt-16 border-t border-[#c69aa1]/10 bg-[#0d0a0c]">
+        <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-between gap-5 px-5 py-9 sm:flex-row lg:px-10">
+          <div className="flex items-center gap-3">
+            <Brand />
           </div>
-
-          <p className="text-xs text-gray-600">
+          <p className="text-center text-[10px] tracking-wide text-[#76676c]">
             © 2026 ABYSSORA. Built for story lovers.
           </p>
         </div>

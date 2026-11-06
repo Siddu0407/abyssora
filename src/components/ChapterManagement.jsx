@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react'
 import {
   BookOpen,
@@ -20,6 +19,40 @@ import {
 import { supabase } from '../lib/supabase'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
+
+const panel =
+  'rounded-2xl border border-[#dcafb9]/15 bg-[#191417]'
+
+const inputStyle =
+  'w-full rounded-xl border border-[#dcafb9]/15 bg-[#110e10] px-4 py-3 text-sm text-[#f4e9e9] outline-none placeholder:text-[#89777c] focus:border-[#c58d98] focus:ring-1 focus:ring-[#c58d98]/20'
+
+const labelStyle =
+  'mb-2 block text-sm font-semibold text-[#d8c6ca]'
+
+const buttonPrimary =
+  'flex items-center justify-center gap-2 rounded-xl bg-[#c58d98] px-5 py-3.5 text-sm font-bold text-[#211619] transition hover:bg-[#d5a2aa] disabled:cursor-not-allowed disabled:opacity-50'
+
+function Notice({ type = 'error', children }) {
+  const isError = type === 'error'
+
+  return (
+    <div
+      className={`mb-5 flex items-start gap-3 rounded-xl border p-4 text-sm ${
+        isError
+          ? 'border-[#d78383]/20 bg-[#d78383]/10 text-[#e6a2a2]'
+          : 'border-[#8caf9a]/20 bg-[#8caf9a]/10 text-[#a8c9b2]'
+      }`}
+    >
+      {isError ? (
+        <AlertCircle size={18} className="mt-0.5 shrink-0" />
+      ) : (
+        <CheckCircle size={18} className="mt-0.5 shrink-0" />
+      )}
+
+      <span className="break-words">{children}</span>
+    </div>
+  )
+}
 
 export default function ChapterManagement({ comics = [] }) {
   const [selectedComicId, setSelectedComicId] = useState('')
@@ -415,50 +448,44 @@ export default function ChapterManagement({ comics = [] }) {
 
   return (
     <section className="mt-12">
-      <div className="mb-6">
-        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-purple-400">
+      {/* Section heading */}
+      <div className="mb-7">
+        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-[#c58d98]">
           <BookOpen size={16} />
           Chapter Control
         </div>
 
-        <h2 className="text-2xl font-black">
+        <h2 className="font-display text-3xl font-semibold tracking-wide text-[#f4e9e9]">
           Chapter Management
         </h2>
 
-        <p className="mt-2 text-sm text-gray-500">
+        <p className="mt-2 max-w-2xl text-sm text-[#a9959a]">
           Upload chapter pages, arrange their reading order, and publish chapters.
         </p>
       </div>
 
-      {error && (
-        <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300">
-          <AlertCircle size={18} className="mt-0.5 shrink-0" />
-          <span className="break-words">{error}</span>
-        </div>
-      )}
+      {error && <Notice type="error">{error}</Notice>}
 
-      {success && (
-        <div className="mb-5 flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-300">
-          <CheckCircle size={18} className="mt-0.5 shrink-0" />
-          <span>{success}</span>
-        </div>
-      )}
+      {success && <Notice type="success">{success}</Notice>}
 
       {comics.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-[#11111a] p-8 text-center">
+        <div className={`${panel} p-8 text-center`}>
           <BookOpen
             size={32}
-            className="mx-auto mb-3 text-purple-400"
+            className="mx-auto mb-3 text-[#c58d98]"
           />
-          <p className="font-semibold">No comics available</p>
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="font-semibold text-[#f4e9e9]">
+            No comics available
+          </p>
+          <p className="mt-2 text-sm text-[#89777c]">
             Add a comic before creating its chapters.
           </p>
         </div>
       ) : (
         <>
-          <div className="mb-6 rounded-2xl border border-white/10 bg-[#11111a] p-5">
-            <label className="mb-2 block text-sm font-semibold text-gray-300">
+          {/* Comic selector */}
+          <div className={`${panel} mb-6 p-5 sm:p-6`}>
+            <label className={labelStyle}>
               Select Comic
             </label>
 
@@ -470,7 +497,7 @@ export default function ChapterManagement({ comics = [] }) {
                 setError('')
                 setSuccess('')
               }}
-              className="w-full rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm text-white outline-none focus:border-purple-500"
+              className={inputStyle}
             >
               {comics.map((comic) => (
                 <option key={comic.id} value={comic.id}>
@@ -480,29 +507,38 @@ export default function ChapterManagement({ comics = [] }) {
             </select>
 
             {selectedComic && (
-              <p className="mt-3 text-xs text-gray-500">
-                Current comic: {selectedComic.title}
+              <p className="mt-3 text-xs text-[#89777c]">
+                Current comic:{' '}
+                <span className="font-semibold text-[#cba6ad]">
+                  {selectedComic.title}
+                </span>
               </p>
             )}
           </div>
 
+          {/* Create chapter form */}
           <form
             onSubmit={handleCreateChapter}
-            className="mb-8 space-y-5 rounded-2xl border border-purple-500/20 bg-[#11111a] p-5 sm:p-6"
+            className={`${panel} mb-8 space-y-6 border-[#c58d98]/20 p-5 sm:p-7`}
           >
-            <div>
-              <h3 className="text-lg font-bold">
-                <Plus className="mr-2 inline text-purple-400" size={19} />
-                Create New Chapter
-              </h3>
-              <p className="mt-1 text-xs text-gray-500">
-                Upload the chapter pages in reading order.
-              </p>
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#c58d98]/20 bg-[#c58d98]/10 text-[#c58d98]">
+                <Plus size={20} />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold text-[#f4e9e9]">
+                  Create New Chapter
+                </h3>
+                <p className="mt-1 text-xs text-[#89777c]">
+                  Upload the chapter pages in reading order.
+                </p>
+              </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-300">
+                <label className={labelStyle}>
                   Chapter Number *
                 </label>
 
@@ -514,12 +550,12 @@ export default function ChapterManagement({ comics = [] }) {
                   onChange={(event) =>
                     setChapterNumber(event.target.value)
                   }
-                  className="w-full rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm outline-none focus:border-purple-500"
+                  className={inputStyle}
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-300">
+                <label className={labelStyle}>
                   Chapter Title
                 </label>
 
@@ -530,27 +566,28 @@ export default function ChapterManagement({ comics = [] }) {
                     setChapterTitle(event.target.value)
                   }
                   placeholder="Optional chapter title"
-                  className="w-full rounded-xl border border-white/10 bg-[#09090e] px-4 py-3 text-sm outline-none focus:border-purple-500"
+                  className={inputStyle}
                 />
               </div>
             </div>
 
+            {/* Image upload */}
             <div>
-              <label className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-300">
-                <Image size={17} />
+              <label className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#d8c6ca]">
+                <Image size={17} className="text-[#c58d98]" />
                 Chapter Page Images *
               </label>
 
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-purple-500/30 bg-purple-500/5 px-5 py-8 text-center transition hover:border-purple-400 hover:bg-purple-500/10">
-                <div className="mb-3 rounded-full bg-purple-500/15 p-3 text-purple-300">
-                  <Upload size={24} />
+              <label className="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#c58d98]/25 bg-[#c58d98]/[0.035] px-5 py-9 text-center transition hover:border-[#c58d98]/60 hover:bg-[#c58d98]/[0.08]">
+                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-[#c58d98]/20 bg-[#c58d98]/10 text-[#c58d98] transition group-hover:scale-105">
+                  <Upload size={25} />
                 </div>
 
-                <span className="text-sm font-bold text-gray-200">
+                <span className="text-sm font-bold text-[#eee1e3]">
                   Click to select chapter page images
                 </span>
 
-                <span className="mt-2 text-xs text-gray-500">
+                <span className="mt-2 text-xs text-[#89777c]">
                   Select multiple images · PNG, JPG or WEBP · Maximum 10 MB each
                 </span>
 
@@ -564,13 +601,15 @@ export default function ChapterManagement({ comics = [] }) {
               </label>
             </div>
 
+            {/* Selected images */}
             {selectedFiles.length > 0 && (
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-bold text-gray-200">
+                  <p className="text-sm font-bold text-[#eee1e3]">
                     Selected Pages ({selectedFiles.length})
                   </p>
-                  <p className="text-xs text-gray-500">
+
+                  <p className="text-xs text-[#89777c]">
                     Use arrows to arrange reading order.
                   </p>
                 </div>
@@ -579,22 +618,22 @@ export default function ChapterManagement({ comics = [] }) {
                   {selectedFiles.map((file, index) => (
                     <div
                       key={`${file.name}-${file.size}-${index}`}
-                      className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#09090e] p-3"
+                      className="flex items-center gap-3 rounded-xl border border-[#dcafb9]/10 bg-[#110e10] p-3"
                     >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-500/10 text-sm font-black text-purple-300">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#c58d98]/20 bg-[#c58d98]/10 text-sm font-black text-[#d5a2aa]">
                         {index + 1}
                       </div>
 
                       <FileImage
                         size={20}
-                        className="shrink-0 text-gray-400"
+                        className="shrink-0 text-[#a9959a]"
                       />
 
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-gray-200">
+                        <p className="truncate text-sm font-semibold text-[#eee1e3]">
                           {file.name}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-[#89777c]">
                           {(file.size / (1024 * 1024)).toFixed(2)} MB
                         </p>
                       </div>
@@ -604,7 +643,7 @@ export default function ChapterManagement({ comics = [] }) {
                           type="button"
                           onClick={() => moveFile(index, -1)}
                           disabled={index === 0 || saving}
-                          className="rounded-lg p-2 text-gray-400 hover:bg-white/10 hover:text-white disabled:opacity-30"
+                          className="rounded-lg p-2 text-[#a9959a] hover:bg-[#c58d98]/10 hover:text-[#e5c0c6] disabled:opacity-30"
                           aria-label="Move page up"
                         >
                           <ChevronUp size={17} />
@@ -616,7 +655,7 @@ export default function ChapterManagement({ comics = [] }) {
                           disabled={
                             index === selectedFiles.length - 1 || saving
                           }
-                          className="rounded-lg p-2 text-gray-400 hover:bg-white/10 hover:text-white disabled:opacity-30"
+                          className="rounded-lg p-2 text-[#a9959a] hover:bg-[#c58d98]/10 hover:text-[#e5c0c6] disabled:opacity-30"
                           aria-label="Move page down"
                         >
                           <ChevronDown size={17} />
@@ -626,7 +665,7 @@ export default function ChapterManagement({ comics = [] }) {
                           type="button"
                           onClick={() => removeFile(index)}
                           disabled={saving}
-                          className="rounded-lg p-2 text-red-400 hover:bg-red-500/10 disabled:opacity-30"
+                          className="rounded-lg p-2 text-[#d78383] hover:bg-[#d78383]/10 disabled:opacity-30"
                           aria-label="Remove page"
                         >
                           <X size={17} />
@@ -638,29 +677,32 @@ export default function ChapterManagement({ comics = [] }) {
               </div>
             )}
 
-            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-[#09090e] p-4">
+            {/* Publish option */}
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-[#dcafb9]/10 bg-[#110e10] p-4 transition hover:border-[#c58d98]/25">
               <input
                 type="checkbox"
                 checked={publishImmediately}
                 onChange={(event) =>
                   setPublishImmediately(event.target.checked)
                 }
-                className="h-4 w-4 accent-purple-500"
+                className="h-4 w-4 accent-[#c58d98]"
               />
+
               <span>
-                <span className="block text-sm font-semibold text-gray-200">
+                <span className="block text-sm font-semibold text-[#eee1e3]">
                   Publish immediately
                 </span>
-                <span className="mt-1 block text-xs text-gray-500">
+                <span className="mt-1 block text-xs text-[#89777c]">
                   Uncheck to save this chapter as a draft.
                 </span>
               </span>
             </label>
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={saving || selectedFiles.length === 0}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3.5 text-sm font-bold transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className={buttonPrimary + ' w-full'}
             >
               {saving ? (
                 <>
@@ -676,46 +718,54 @@ export default function ChapterManagement({ comics = [] }) {
             </button>
 
             {saving && (
-              <p className="text-center text-xs text-gray-500">
+              <p className="text-center text-xs text-[#89777c]">
                 Please keep this page open until the upload finishes.
               </p>
             )}
           </form>
 
+          {/* Existing chapters */}
           <div>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-lg font-bold">
-                Existing Chapters
-              </h3>
+              <div>
+                <h3 className="text-lg font-bold text-[#f4e9e9]">
+                  Existing Chapters
+                </h3>
+                <p className="mt-1 text-xs text-[#89777c]">
+                  Manage published chapters and saved drafts.
+                </p>
+              </div>
 
               <button
                 type="button"
                 onClick={loadChapters}
                 disabled={loadingChapters}
-                className="rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 disabled:opacity-50"
+                className="rounded-lg border border-[#dcafb9]/15 px-3 py-2 text-xs font-semibold text-[#cba6ad] transition hover:border-[#c58d98]/40 hover:bg-[#c58d98]/10 disabled:opacity-50"
               >
                 {loadingChapters ? 'Refreshing...' : 'Refresh Chapters'}
               </button>
             </div>
 
             {loadingChapters ? (
-              <div className="rounded-2xl border border-white/10 bg-[#11111a] p-8 text-center">
+              <div className={`${panel} p-8 text-center`}>
                 <LoaderCircle
                   size={27}
-                  className="mx-auto animate-spin text-purple-400"
+                  className="mx-auto animate-spin text-[#c58d98]"
                 />
-                <p className="mt-3 text-sm text-gray-500">
+                <p className="mt-3 text-sm text-[#89777c]">
                   Loading chapters...
                 </p>
               </div>
             ) : chapters.length === 0 ? (
-              <div className="rounded-2xl border border-white/10 bg-[#11111a] p-8 text-center">
+              <div className={`${panel} p-8 text-center`}>
                 <BookOpen
                   size={30}
-                  className="mx-auto mb-3 text-purple-400"
+                  className="mx-auto mb-3 text-[#c58d98]"
                 />
-                <p className="font-semibold">No chapters yet</p>
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="font-semibold text-[#f4e9e9]">
+                  No chapters yet
+                </p>
+                <p className="mt-2 text-sm text-[#89777c]">
                   Create the first chapter using the form above.
                 </p>
               </div>
@@ -724,33 +774,33 @@ export default function ChapterManagement({ comics = [] }) {
                 {chapters.map((chapter) => (
                   <article
                     key={chapter.id}
-                    className="rounded-2xl border border-white/10 bg-[#11111a] p-4 sm:p-5"
+                    className={`${panel} p-4 sm:p-5`}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="font-bold">
+                          <h4 className="font-bold text-[#f4e9e9]">
                             Chapter {chapter.chapter_number}
                           </h4>
 
                           {chapter.is_published ? (
-                            <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-300">
+                            <span className="rounded-full border border-[#8caf9a]/20 bg-[#8caf9a]/10 px-2.5 py-1 text-[10px] font-bold text-[#a8c9b2]">
                               Published
                             </span>
                           ) : (
-                            <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold text-amber-300">
+                            <span className="rounded-full border border-[#d4ae7d]/20 bg-[#d4ae7d]/10 px-2.5 py-1 text-[10px] font-bold text-[#dfbd91]">
                               Draft
                             </span>
                           )}
                         </div>
 
                         {chapter.title && (
-                          <p className="mt-1 text-sm text-gray-400">
+                          <p className="mt-1 text-sm text-[#b9a8ac]">
                             {chapter.title}
                           </p>
                         )}
 
-                        <p className="mt-2 text-xs text-gray-500">
+                        <p className="mt-2 text-xs text-[#89777c]">
                           {chapter.pages?.length || 0} page images
                         </p>
                       </div>
@@ -763,7 +813,7 @@ export default function ChapterManagement({ comics = [] }) {
                             updatingId === chapter.id ||
                             deletingId === chapter.id
                           }
-                          className="flex items-center gap-2 rounded-lg border border-purple-500/20 bg-purple-500/5 px-3 py-2 text-xs font-semibold text-purple-300 hover:bg-purple-500/10 disabled:opacity-50"
+                          className="flex items-center gap-2 rounded-lg border border-[#c58d98]/20 bg-[#c58d98]/[0.06] px-3 py-2 text-xs font-semibold text-[#d5a2aa] transition hover:bg-[#c58d98]/15 disabled:opacity-50"
                         >
                           {updatingId === chapter.id ? (
                             <LoaderCircle
@@ -786,7 +836,7 @@ export default function ChapterManagement({ comics = [] }) {
                             deletingId === chapter.id ||
                             updatingId === chapter.id
                           }
-                          className="flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+                          className="flex items-center gap-2 rounded-lg border border-[#d78383]/20 bg-[#d78383]/[0.06] px-3 py-2 text-xs font-semibold text-[#e6a2a2] transition hover:bg-[#d78383]/15 disabled:opacity-50"
                         >
                           {deletingId === chapter.id ? (
                             <LoaderCircle
@@ -801,12 +851,13 @@ export default function ChapterManagement({ comics = [] }) {
                       </div>
                     </div>
 
+                    {/* Chapter page previews */}
                     {chapter.pages?.length > 0 && (
                       <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
                         {chapter.pages.map((page, index) => (
                           <div
                             key={`${chapter.id}-${index}`}
-                            className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black"
+                            className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-[#dcafb9]/15 bg-[#110e10]"
                           >
                             <img
                               src={page}
@@ -814,7 +865,7 @@ export default function ChapterManagement({ comics = [] }) {
                               className="h-full w-full object-cover"
                               loading="lazy"
                             />
-                            <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1.5 py-0.5 text-[9px] font-bold">
+                            <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1.5 py-0.5 text-[9px] font-bold text-white">
                               {index + 1}
                             </span>
                           </div>

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
@@ -17,6 +16,18 @@ import {
 
 import { supabase } from '../lib/supabase'
 
+function Emblem({ size = 36 }) {
+  return (
+    <img
+      src="/abyssora-mark.svg"
+      alt="ABYSSORA"
+      width={size}
+      height={size}
+      className="object-contain"
+    />
+  )
+}
+
 export default function MangaDetails() {
   const { id } = useParams()
 
@@ -27,16 +38,15 @@ export default function MangaDetails() {
   const [imageFailed, setImageFailed] = useState(false)
 
   const [bookmarked, setBookmarked] = useState(false)
-  const [bookmarkUser, setBookmarkUser] = useState(null)
   const [bookmarkLoading, setBookmarkLoading] = useState(true)
   const [bookmarkSaving, setBookmarkSaving] = useState(false)
   const [bookmarkMessage, setBookmarkMessage] = useState('')
 
-  // Load manga and its published chapters.
+  // Load manga details and published chapters.
   useEffect(() => {
     let cancelled = false
 
-    const loadManga = async () => {
+    async function loadManga() {
       setLoading(true)
       setError('')
       setImageFailed(false)
@@ -58,16 +68,14 @@ export default function MangaDetails() {
           return
         }
 
-        const { data: chapterData, error: chapterError } =
-          await supabase
-            .from('chapters')
-            .select('id, chapter_number, title, pages, is_published')
-            .eq('comic_id', id)
-            .eq('is_published', true)
-            .order('chapter_number', { ascending: false })
+        const { data: chapterData, error: chapterError } = await supabase
+          .from('chapters')
+          .select('id, chapter_number, title, pages, is_published')
+          .eq('comic_id', id)
+          .eq('is_published', true)
+          .order('chapter_number', { ascending: false })
 
         if (chapterError) throw chapterError
-
         if (cancelled) return
 
         setStory({
@@ -85,7 +93,7 @@ export default function MangaDetails() {
           description: comic.description || '',
           colors:
             comic.colors ||
-            'from-violet-950 via-purple-900 to-black',
+            'from-[#392b31] via-[#211a1e] to-[#110e10]',
           symbol: comic.symbol || '✧',
           status: comic.status || 'Ongoing',
         })
@@ -111,21 +119,20 @@ export default function MangaDetails() {
     }
   }, [id])
 
-  // Load the signed-in user's bookmark status.
+  // Check the signed-in user's bookmark.
   useEffect(() => {
     let cancelled = false
 
-    const checkBookmark = async (user) => {
+    async function checkBookmark(user) {
       if (!user) {
         if (!cancelled) {
-          setBookmarkUser(null)
           setBookmarked(false)
           setBookmarkLoading(false)
         }
         return
       }
 
-      const { data, error } = await supabase
+      const { data, error: bookmarkError } = await supabase
         .from('bookmarks')
         .select('manga_id')
         .eq('user_id', user.id)
@@ -134,8 +141,8 @@ export default function MangaDetails() {
 
       if (cancelled) return
 
-      if (error) {
-        console.error('Could not load bookmark:', error)
+      if (bookmarkError) {
+        console.error('Could not load bookmark:', bookmarkError)
         setBookmarkMessage('Could not check your saved library.')
         setBookmarked(false)
       } else {
@@ -143,22 +150,21 @@ export default function MangaDetails() {
         setBookmarkMessage('')
       }
 
-      setBookmarkUser(user)
       setBookmarkLoading(false)
     }
 
-    const loadBookmark = async () => {
+    async function loadBookmark() {
       setBookmarkLoading(true)
 
       const {
         data: { user },
-        error,
+        error: userError,
       } = await supabase.auth.getUser()
 
       if (cancelled) return
 
-      if (error) {
-        console.error('Could not check signed-in user:', error)
+      if (userError) {
+        console.error('Could not check signed-in user:', userError)
         setBookmarkLoading(false)
         return
       }
@@ -171,7 +177,12 @@ export default function MangaDetails() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      checkBookmark(session?.user || null)
+      Promise.resolve().then(() => {
+        if (!cancelled) {
+          setBookmarkLoading(true)
+          checkBookmark(session?.user || null)
+        }
+      })
     })
 
     return () => {
@@ -180,8 +191,8 @@ export default function MangaDetails() {
     }
   }, [id])
 
-  // Add or remove a bookmark in Supabase.
-  const toggleBookmark = async () => {
+  // Add or remove a bookmark.
+  async function toggleBookmark() {
     if (bookmarkSaving) return
 
     setBookmarkMessage('')
@@ -202,48 +213,49 @@ export default function MangaDetails() {
       }
 
       if (bookmarked) {
-        const { error } = await supabase
+        const { error: deleteError } = await supabase
           .from('bookmarks')
           .delete()
           .eq('user_id', user.id)
           .eq('manga_id', id)
 
-        if (error) throw error
+        if (deleteError) throw deleteError
 
         setBookmarked(false)
         setBookmarkMessage('Removed from your library.')
       } else {
-        const { error } = await supabase
+        const { error: insertError } = await supabase
           .from('bookmarks')
           .insert({
             user_id: user.id,
             manga_id: id,
           })
 
-        if (error) throw error
+        if (insertError) throw insertError
 
         setBookmarked(true)
         setBookmarkMessage('Successfully saved to your library!')
       }
-
-      setBookmarkUser(user)
     } catch (err) {
       console.error('Bookmark error:', err)
-      setBookmarkMessage('Could not update your library. Please try again.')
+      setBookmarkMessage(
+        'Could not update your library. Please try again.'
+      )
     } finally {
       setBookmarkSaving(false)
     }
   }
 
+  // Loading screen.
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#09090e] text-white">
+      <main className="flex min-h-screen items-center justify-center bg-[#110e10] text-[#f1e7e8]">
         <div className="text-center">
           <LoaderCircle
             size={35}
-            className="mx-auto animate-spin text-purple-400"
+            className="mx-auto animate-spin text-[#c69aa1]"
           />
-          <p className="mt-4 text-sm text-gray-400">
+          <p className="mt-4 text-sm text-[#99898e]">
             Loading manga...
           </p>
         </div>
@@ -251,26 +263,24 @@ export default function MangaDetails() {
     )
   }
 
-  if (error) {
+  // Error or missing manga.
+  if (error || !story) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-[#09090e] px-5 text-white">
-        <h1 className="text-3xl font-black">Something went wrong</h1>
-        <p className="mt-3 text-center text-gray-400">{error}</p>
-        <Link to="/" className="mt-6 rounded-xl bg-purple-600 px-6 py-3">
-          Return home
-        </Link>
-      </main>
-    )
-  }
+      <main className="flex min-h-screen flex-col items-center justify-center bg-[#110e10] px-5 text-[#f1e7e8]">
+        <Sparkles size={36} className="mb-5 text-[#c69aa1]" />
 
-  if (!story) {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-[#09090e] px-5 text-white">
-        <h1 className="text-4xl font-black">Story not found</h1>
-        <p className="mt-3 text-gray-400">
-          This manga does not exist in our library.
+        <h1 className="text-3xl font-semibold">
+          {error ? 'Something went wrong' : 'Story not found'}
+        </h1>
+
+        <p className="mt-3 text-center text-sm text-[#99898e]">
+          {error || 'This manga does not exist in our library.'}
         </p>
-        <Link to="/" className="mt-6 rounded-xl bg-purple-600 px-6 py-3">
+
+        <Link
+          to="/"
+          className="mt-6 rounded-xl bg-[#c69aa1] px-6 py-3 font-bold text-[#211619] transition hover:bg-[#dfb9bf]"
+        >
           Return home
         </Link>
       </main>
@@ -280,27 +290,33 @@ export default function MangaDetails() {
   const latestChapter = chapters[0]?.chapter_number || 0
 
   return (
-    <main className="min-h-screen bg-[#09090e] text-white">
+    <main className="min-h-screen bg-[#110e10] text-[#f1e7e8]">
 
       {/* NAVIGATION */}
-      <header className="sticky top-0 z-40 border-b border-white/[0.07] bg-[#09090e]/95 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
+      <header className="sticky top-0 z-40 border-b border-[#c69aa1]/10 bg-[#110e10]/95 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3.5">
 
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-600">
-              <Sparkles size={20} />
+          <Link to="/" className="group flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#c69aa1]/25 bg-[#211a1e] transition group-hover:border-[#c69aa1]/60">
+              <Emblem size={32} />
             </div>
 
-            <span className="font-black tracking-widest">
-              ABYSS<span className="text-purple-400">ORA</span>
-            </span>
+            <div className="leading-none">
+              <span className="text-lg font-black tracking-[0.18em]">
+                ABYSSORA
+              </span>
+
+              <p className="mt-1 text-[8px] font-semibold tracking-[0.3em] text-[#a88b91]">
+                WORLDS BEYOND STORIES
+              </p>
+            </div>
           </Link>
 
           <Link
             to="/"
-            className="flex items-center gap-2 text-sm text-gray-400 transition hover:text-white"
+            className="flex items-center gap-2 rounded-xl border border-[#c69aa1]/15 px-3 py-2 text-xs font-semibold text-[#ad9da1] transition hover:border-[#c69aa1]/40 hover:text-[#f1e7e8] sm:px-4 sm:text-sm"
           >
-            <ArrowLeft size={17} />
+            <ArrowLeft size={16} />
             Back to library
           </Link>
 
@@ -308,16 +324,18 @@ export default function MangaDetails() {
       </header>
 
       {/* HERO */}
-      <section className="relative overflow-hidden border-b border-white/[0.06]">
+      <section className="relative overflow-hidden border-b border-[#c69aa1]/10">
 
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-950/50 via-[#09090e] to-[#09090e]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_40%,rgba(156,103,116,0.16),transparent_50%),linear-gradient(115deg,#21191d_0%,#171215_55%,#110e10_100%)]" />
 
-        <div className="absolute -right-20 top-0 h-96 w-96 rounded-full bg-purple-700/10 blur-[100px]" />
+        <div className="absolute -right-20 top-0 h-96 w-96 rounded-full border border-[#c69aa1]/10" />
+
+        <div className="absolute -right-8 top-10 h-72 w-72 rounded-full border border-[#c69aa1]/10" />
 
         <div className="relative mx-auto grid max-w-7xl gap-10 px-5 py-12 md:grid-cols-[280px_1fr] md:py-16">
 
           {/* COVER */}
-          <div className="group relative mx-auto aspect-[3/4] w-full max-w-[280px] overflow-hidden rounded-2xl border border-white/10 bg-[#171322] shadow-2xl shadow-purple-950/40">
+          <div className="group relative mx-auto aspect-[3/4] w-full max-w-[280px] overflow-hidden rounded-2xl border border-[#c69aa1]/20 bg-[#211a1e] shadow-2xl shadow-black/40">
 
             {!imageFailed && story.coverImage ? (
               <img
@@ -327,17 +345,20 @@ export default function MangaDetails() {
                 className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
               />
             ) : (
-              <div className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${story.colors}`}>
-                <span className="text-9xl text-white/70">
+              <div
+                className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${story.colors}`}
+              >
+                <span className="text-9xl text-[#f1e7e8]/70">
                   {story.symbol}
                 </span>
               </div>
             )}
 
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
 
-            <div className="absolute bottom-5 left-5 right-5">
-              <p className="text-xs font-bold tracking-[0.2em] text-purple-300">
+            <div className="absolute bottom-5 left-5 right-5 flex items-center gap-2">
+              <Emblem size={25} />
+              <p className="text-xs font-bold tracking-[0.2em] text-[#f1e7e8]">
                 ABYSSORA
               </p>
             </div>
@@ -347,38 +368,41 @@ export default function MangaDetails() {
           {/* INFORMATION */}
           <div className="flex flex-col justify-center">
 
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-purple-500/15 px-3 py-1 text-xs font-bold text-purple-300">
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <span className="rounded-full border border-[#c69aa1]/25 bg-[#c69aa1]/10 px-3 py-1 text-xs font-bold text-[#dfb9bf]">
                 {story.status}
               </span>
 
               {story.year && (
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-[#89777c]">
                   {story.year}
                 </span>
               )}
             </div>
 
-            <h1 className="text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
+            <h1 className="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
               {story.title}
             </h1>
 
             {/* STATISTICS */}
-            <div className="mt-6 flex flex-wrap gap-6 text-sm text-gray-400">
+            <div className="mt-6 flex flex-wrap gap-6 text-sm text-[#ad9da1]">
 
               <span className="flex items-center gap-2">
-                <Star size={17} className="fill-yellow-400 text-yellow-400" />
+                <Star
+                  size={17}
+                  className="fill-[#d9b47f] text-[#d9b47f]"
+                />
                 {story.rating}
               </span>
 
               <span className="flex items-center gap-2">
-                <BookOpen size={17} />
+                <BookOpen size={17} className="text-[#c69aa1]" />
                 {chapters.length} published chapters
               </span>
 
               {story.year && (
                 <span className="flex items-center gap-2">
-                  <CalendarDays size={17} />
+                  <CalendarDays size={17} className="text-[#c69aa1]" />
                   {story.year}
                 </span>
               )}
@@ -386,27 +410,32 @@ export default function MangaDetails() {
             </div>
 
             {/* GENRES */}
-            <div className="mt-6 flex flex-wrap gap-2">
-              {story.genres.map((genre) => (
-                <span
-                  key={genre}
-                  className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-gray-300"
-                >
-                  {genre}
-                </span>
-              ))}
-            </div>
+            {story.genres.length > 0 && (
+              <div className="mt-6 flex flex-wrap gap-2">
+                {story.genres.map((genre) => (
+                  <span
+                    key={genre}
+                    className="rounded-lg border border-[#c69aa1]/15 bg-[#211a1e] px-3 py-2 text-xs text-[#d8c9cc]"
+                  >
+                    {genre}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* DESCRIPTION */}
-            <p className="mt-7 max-w-2xl text-sm leading-8 text-gray-400">
-              {story.description}
+            <p className="mt-7 max-w-2xl whitespace-pre-line text-sm leading-8 text-[#ad9da1]">
+              {story.description ||
+                'No description has been added for this story yet.'}
             </p>
 
             {/* AUTHOR */}
-            <div className="mt-7 flex items-center gap-2 text-sm text-gray-400">
-              <User size={17} />
+            <div className="mt-7 flex items-center gap-2 text-sm text-[#99898e]">
+              <User size={17} className="text-[#c69aa1]" />
               Author:
-              <span className="text-white">{story.author}</span>
+              <span className="font-semibold text-[#f1e7e8]">
+                {story.author}
+              </span>
             </div>
 
             {/* ACTIONS */}
@@ -414,7 +443,7 @@ export default function MangaDetails() {
 
               <a
                 href="#chapters"
-                className="flex items-center gap-2 rounded-xl bg-purple-600 px-6 py-3.5 text-sm font-bold transition hover:-translate-y-1 hover:bg-purple-500"
+                className="flex items-center gap-2 rounded-xl bg-[#c69aa1] px-6 py-3.5 text-sm font-bold text-[#211619] transition hover:-translate-y-0.5 hover:bg-[#dfb9bf]"
               >
                 <BookOpen size={18} />
                 Read chapters
@@ -426,8 +455,8 @@ export default function MangaDetails() {
                 aria-pressed={bookmarked}
                 className={`flex items-center gap-2 rounded-xl border px-5 py-3.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
                   bookmarked
-                    ? 'border-purple-500 bg-purple-500/15 text-purple-300'
-                    : 'border-white/15 hover:border-purple-400 hover:text-purple-300'
+                    ? 'border-[#c69aa1]/50 bg-[#c69aa1]/15 text-[#dfb9bf]'
+                    : 'border-[#c69aa1]/20 text-[#d8c9cc] hover:border-[#c69aa1]/60 hover:text-[#dfb9bf]'
                 }`}
               >
                 {bookmarkSaving ? (
@@ -453,25 +482,27 @@ export default function MangaDetails() {
             {/* BOOKMARK FEEDBACK */}
             {bookmarkMessage && (
               <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+
                 {bookmarkMessage.includes('Successfully') ||
                 bookmarkMessage.includes('Removed') ? (
-                  <CheckCircle size={16} className="text-green-400" />
+                  <CheckCircle size={16} className="text-[#8caf9a]" />
                 ) : (
-                  <AlertCircle size={16} className="text-yellow-400" />
+                  <AlertCircle size={16} className="text-[#d9b47f]" />
                 )}
 
-                <span className="text-gray-300">
+                <span className="text-[#c8b9bd]">
                   {bookmarkMessage}
                 </span>
 
                 {bookmarkMessage.includes('sign in') && (
                   <Link
                     to="/login"
-                    className="font-bold text-purple-400 hover:text-purple-300"
+                    className="font-bold text-[#dfb9bf] hover:text-white"
                   >
                     Sign in
                   </Link>
                 )}
+
               </div>
             )}
 
@@ -482,53 +513,53 @@ export default function MangaDetails() {
       {/* CHAPTERS */}
       <section
         id="chapters"
-        className="mx-auto max-w-7xl px-5 py-12"
+        className="mx-auto max-w-7xl scroll-mt-24 px-5 py-12"
       >
 
         <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
 
           <div>
-            <div className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-purple-400">
+            <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.24em] text-[#c69aa1]">
               Continue the journey
             </div>
 
-            <h2 className="text-2xl font-black sm:text-3xl">
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               Chapters
             </h2>
 
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="mt-2 text-sm text-[#89777c]">
               {chapters.length} published chapters available
             </p>
           </div>
 
           {latestChapter > 0 && (
-            <span className="rounded-lg border border-white/10 px-3 py-2 text-xs text-gray-400">
+            <span className="rounded-lg border border-[#c69aa1]/15 bg-[#191417] px-3 py-2 text-xs text-[#ad9da1]">
               Latest: Chapter {latestChapter}
             </span>
           )}
 
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
+        <div className="overflow-hidden rounded-2xl border border-[#c69aa1]/20 bg-[#191417]">
 
           {chapters.length > 0 ? (
             chapters.slice(0, 5).map((chapter, index) => (
               <Link
                 key={chapter.id}
                 to={`/manga/${story.id}/chapter/${chapter.chapter_number}`}
-                className={`group flex items-center justify-between gap-3 p-5 transition hover:bg-purple-500/[0.07] ${
+                className={`group flex items-center justify-between gap-3 p-5 transition hover:bg-[#c69aa1]/[0.06] ${
                   index !== Math.min(chapters.length, 5) - 1
-                    ? 'border-b border-white/[0.06]'
+                    ? 'border-b border-[#c69aa1]/10'
                     : ''
                 }`}
               >
 
                 <div>
-                  <p className="text-sm font-semibold transition group-hover:text-purple-300">
+                  <p className="text-sm font-semibold text-[#e9dcde] transition group-hover:text-[#dfb9bf]">
                     Chapter {chapter.chapter_number}
                   </p>
 
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-[#89777c]">
                     {chapter.title || 'Read chapter'}
                   </p>
                 </div>
@@ -536,14 +567,14 @@ export default function MangaDetails() {
                 <div className="flex items-center gap-3">
 
                   {index === 0 && (
-                    <span className="rounded-full bg-purple-500/15 px-2 py-1 text-[10px] font-bold text-purple-300">
+                    <span className="rounded-full bg-[#c69aa1]/10 px-2 py-1 text-[10px] font-bold text-[#dfb9bf]">
                       LATEST
                     </span>
                   )}
 
                   <ChevronRight
                     size={18}
-                    className="text-gray-500 transition group-hover:translate-x-1 group-hover:text-purple-400"
+                    className="text-[#76676c] transition group-hover:translate-x-1 group-hover:text-[#c69aa1]"
                   />
 
                 </div>
@@ -552,22 +583,27 @@ export default function MangaDetails() {
             ))
           ) : (
             <div className="px-5 py-12 text-center">
-              <BookOpen size={32} className="mx-auto text-gray-600" />
 
-              <p className="mt-4 font-semibold text-gray-300">
+              <BookOpen
+                size={32}
+                className="mx-auto text-[#76676c]"
+              />
+
+              <p className="mt-4 font-semibold text-[#e4d5d8]">
                 No published chapters yet
               </p>
 
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-[#89777c]">
                 Chapters will appear here once an administrator publishes them.
               </p>
+
             </div>
           )}
 
         </div>
 
         {chapters.length > 5 && (
-          <p className="mt-5 text-center text-xs text-gray-500">
+          <p className="mt-5 text-center text-xs text-[#76676c]">
             Showing the latest 5 published chapters.
           </p>
         )}
@@ -575,7 +611,7 @@ export default function MangaDetails() {
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-white/[0.07] px-5 py-8 text-center text-xs text-gray-600">
+      <footer className="border-t border-[#c69aa1]/10 bg-[#0d0a0c] px-5 py-8 text-center text-xs text-[#76676c]">
         © 2026 ABYSSORA. A universe of stories awaits.
       </footer>
 

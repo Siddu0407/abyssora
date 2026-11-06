@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
@@ -10,7 +9,6 @@ import {
   Home,
   List,
   Settings,
-  Sparkles,
   LoaderCircle,
   AlertCircle,
   BookOpen,
@@ -34,13 +32,16 @@ const WIDTH_OPTIONS = {
 
 const BACKGROUND_OPTIONS = {
   dark: {
-    page: 'bg-[#09090e]',
-    header: 'bg-[#09090e]/95',
-    panel: 'bg-[#15131e]',
-    text: 'text-white',
-    secondary: 'text-gray-400',
-    muted: 'text-gray-500',
-    border: 'border-white/10',
+    page: 'bg-[#110e10]',
+    header: 'bg-[#110e10]/95',
+    panel: 'bg-[#211a1e]',
+    text: 'text-[#f1e7e8]',
+    secondary: 'text-[#ad9da1]',
+    muted: 'text-[#89777c]',
+    border: 'border-[#c69aa1]/15',
+    accent: 'text-[#c69aa1]',
+    button: 'bg-[#c69aa1] text-[#211619] hover:bg-[#dfb9bf]',
+    progress: 'bg-[#c69aa1]',
   },
   black: {
     page: 'bg-black',
@@ -50,15 +51,21 @@ const BACKGROUND_OPTIONS = {
     secondary: 'text-gray-400',
     muted: 'text-gray-500',
     border: 'border-white/10',
+    accent: 'text-[#c69aa1]',
+    button: 'bg-[#c69aa1] text-[#211619] hover:bg-[#dfb9bf]',
+    progress: 'bg-[#c69aa1]',
   },
   light: {
-    page: 'bg-[#f1f0ed]',
-    header: 'bg-[#f1f0ed]/95',
+    page: 'bg-[#f1eeeb]',
+    header: 'bg-[#f1eeeb]/95',
     panel: 'bg-white',
-    text: 'text-[#191820]',
-    secondary: 'text-gray-600',
-    muted: 'text-gray-500',
-    border: 'border-black/10',
+    text: 'text-[#21191d]',
+    secondary: 'text-[#76676c]',
+    muted: 'text-[#99898e]',
+    border: 'border-[#9b7e84]/20',
+    accent: 'text-[#a66f7b]',
+    button: 'bg-[#a66f7b] text-white hover:bg-[#8f5966]',
+    progress: 'bg-[#a66f7b]',
   },
 }
 
@@ -66,12 +73,33 @@ function getSavedSettings() {
   try {
     const saved = localStorage.getItem('abyssora-reader-settings')
 
-    return saved
-      ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) }
-      : DEFAULT_SETTINGS
+    if (!saved) return DEFAULT_SETTINGS
+
+    const parsed = JSON.parse(saved)
+
+    return {
+      width: WIDTH_OPTIONS[parsed.width]
+        ? parsed.width
+        : DEFAULT_SETTINGS.width,
+      background: BACKGROUND_OPTIONS[parsed.background]
+        ? parsed.background
+        : DEFAULT_SETTINGS.background,
+    }
   } catch {
     return DEFAULT_SETTINGS
   }
+}
+
+function Emblem({ size = 34 }) {
+  return (
+    <img
+      src="/abyssora-mark.svg"
+      alt="ABYSSORA"
+      width={size}
+      height={size}
+      className="object-contain"
+    />
+  )
 }
 
 export default function Reader() {
@@ -83,17 +111,21 @@ export default function Reader() {
   const [story, setStory] = useState(null)
   const [currentChapter, setCurrentChapter] = useState(null)
   const [publishedChapters, setPublishedChapters] = useState([])
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [progress, setProgress] = useState(0)
+
   const [fullscreen, setFullscreen] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+
   const [readerSettings, setReaderSettings] = useState(getSavedSettings)
 
-  const theme = BACKGROUND_OPTIONS[readerSettings.background]
-    || BACKGROUND_OPTIONS.dark
+  const theme =
+    BACKGROUND_OPTIONS[readerSettings.background] ||
+    BACKGROUND_OPTIONS.dark
 
-  // Save reader settings on this browser.
+  // Save reader settings on this device.
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -112,15 +144,16 @@ export default function Reader() {
     }))
   }
 
-  // Load manga and its published chapters.
+  // Load manga and published chapters.
   useEffect(() => {
     let cancelled = false
 
-    const loadReader = async () => {
+    async function loadReader() {
       setLoading(true)
       setError('')
       setStory(null)
       setCurrentChapter(null)
+      setPublishedChapters([])
 
       if (!Number.isInteger(chapter) || chapter < 1) {
         setLoading(false)
@@ -141,13 +174,12 @@ export default function Reader() {
           return
         }
 
-        const { data: chapters, error: chaptersError } =
-          await supabase
-            .from('chapters')
-            .select('id, chapter_number, title, pages, is_published')
-            .eq('comic_id', id)
-            .eq('is_published', true)
-            .order('chapter_number', { ascending: true })
+        const { data: chapters, error: chaptersError } = await supabase
+          .from('chapters')
+          .select('id, chapter_number, title, pages, is_published')
+          .eq('comic_id', id)
+          .eq('is_published', true)
+          .order('chapter_number', { ascending: true })
 
         if (chaptersError) throw chaptersError
 
@@ -167,7 +199,9 @@ export default function Reader() {
           setError('Unable to load this chapter. Please try again.')
         }
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+        }
       }
     }
 
@@ -182,7 +216,7 @@ export default function Reader() {
   useEffect(() => {
     let cancelled = false
 
-    const saveReadingHistory = async () => {
+    async function saveReadingHistory() {
       if (!story || !currentChapter) return
 
       try {
@@ -194,7 +228,7 @@ export default function Reader() {
         if (userError) throw userError
         if (!user || cancelled) return
 
-        const { error } = await supabase
+        const { error: historyError } = await supabase
           .from('reading_history')
           .upsert(
             {
@@ -208,7 +242,7 @@ export default function Reader() {
             }
           )
 
-        if (error) throw error
+        if (historyError) throw historyError
       } catch (err) {
         console.error('Could not save reading history:', err)
       }
@@ -235,13 +269,25 @@ export default function Reader() {
 
     window.addEventListener('scroll', updateProgress)
     window.addEventListener('resize', updateProgress)
+
     updateProgress()
 
     return () => {
       window.removeEventListener('scroll', updateProgress)
       window.removeEventListener('resize', updateProgress)
     }
-  }, [currentChapter, readerSettings.width])
+  }, [currentChapter, readerSettings.width, readerSettings.background])
+
+  // Update progress when chapter images finish loading.
+  const handlePageLoad = () => {
+    const total =
+      document.documentElement.scrollHeight - window.innerHeight
+
+    const value =
+      total > 0 ? (window.scrollY / total) * 100 : 0
+
+    setProgress(Math.min(100, Math.max(0, value)))
+  }
 
   // Fullscreen detection.
   useEffect(() => {
@@ -251,8 +297,9 @@ export default function Reader() {
 
     document.addEventListener('fullscreenchange', updateFullscreen)
 
-    return () =>
+    return () => {
       document.removeEventListener('fullscreenchange', updateFullscreen)
+    }
   }, [])
 
   const toggleFullscreen = async () => {
@@ -285,15 +332,17 @@ export default function Reader() {
       ? publishedChapters[currentIndex + 1]
       : null
 
+  // Loading screen.
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#09090e] text-white">
+      <main className="flex min-h-screen items-center justify-center bg-[#110e10] text-[#f1e7e8]">
         <div className="text-center">
           <LoaderCircle
             size={36}
-            className="mx-auto animate-spin text-purple-400"
+            className="mx-auto animate-spin text-[#c69aa1]"
           />
-          <p className="mt-4 text-sm text-gray-400">
+
+          <p className="mt-4 text-sm text-[#99898e]">
             Loading chapter...
           </p>
         </div>
@@ -301,40 +350,56 @@ export default function Reader() {
     )
   }
 
+  // Error screen.
   if (error) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-[#09090e] px-5 text-white">
-        <AlertCircle size={40} className="text-red-400" />
-        <h1 className="mt-5 text-3xl font-black">
+      <main className="flex min-h-screen flex-col items-center justify-center bg-[#110e10] px-5 text-[#f1e7e8]">
+        <AlertCircle size={40} className="text-[#d78383]" />
+
+        <h1 className="mt-5 text-3xl font-semibold">
           Something went wrong
         </h1>
-        <p className="mt-3 text-center text-gray-400">{error}</p>
-        <Link to="/" className="mt-6 rounded-xl bg-purple-600 px-6 py-3">
+
+        <p className="mt-3 text-center text-[#99898e]">
+          {error}
+        </p>
+
+        <Link
+          to="/"
+          className="mt-6 rounded-xl bg-[#c69aa1] px-6 py-3 font-bold text-[#211619] transition hover:bg-[#dfb9bf]"
+        >
           Return to ABYSSORA
         </Link>
       </main>
     )
   }
 
+  // Missing chapter screen.
   if (!story || !currentChapter) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-[#09090e] px-5 text-center text-white">
-        <BookOpen size={40} className="text-purple-400" />
-        <h1 className="mt-5 text-4xl font-black">
+      <main className="flex min-h-screen flex-col items-center justify-center bg-[#110e10] px-5 text-center text-[#f1e7e8]">
+        <BookOpen size={40} className="text-[#c69aa1]" />
+
+        <h1 className="mt-5 text-4xl font-semibold">
           Chapter not found
         </h1>
-        <p className="mt-3 max-w-md text-gray-400">
+
+        <p className="mt-3 max-w-md text-[#99898e]">
           Chapter {chapter} is not available. It may not have been published yet.
         </p>
+
         {story ? (
           <Link
             to={`/manga/${id}`}
-            className="mt-6 rounded-xl bg-purple-600 px-6 py-3"
+            className="mt-6 rounded-xl bg-[#c69aa1] px-6 py-3 font-bold text-[#211619] transition hover:bg-[#dfb9bf]"
           >
             Back to manga
           </Link>
         ) : (
-          <Link to="/" className="mt-6 rounded-xl bg-purple-600 px-6 py-3">
+          <Link
+            to="/"
+            className="mt-6 rounded-xl bg-[#c69aa1] px-6 py-3 font-bold text-[#211619] transition hover:bg-[#dfb9bf]"
+          >
             Return home
           </Link>
         )}
@@ -349,23 +414,38 @@ export default function Reader() {
   return (
     <main className={`min-h-screen ${theme.page} ${theme.text}`}>
 
-      {/* TOP BAR */}
-      <header className={`sticky top-0 z-50 border-b ${theme.border} ${theme.header} backdrop-blur-xl`}>
-
+      {/* TOP NAVIGATION */}
+      <header
+        className={`sticky top-0 z-50 border-b ${theme.border} ${theme.header} backdrop-blur-xl`}
+      >
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
 
-          <Link to="/" className="flex items-center gap-2">
-            <Sparkles className="text-purple-400" size={22} />
-            <span className="font-black tracking-widest">
-              ABYSS<span className="text-purple-400">ORA</span>
-            </span>
+          <Link to="/" className="group flex shrink-0 items-center gap-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#c69aa1]/25 bg-[#211a1e] transition group-hover:border-[#c69aa1]/60">
+              <Emblem size={32} />
+            </div>
+
+            <div className="hidden leading-none sm:block">
+              <span className="text-sm font-black tracking-[0.16em]">
+                ABYSSORA
+              </span>
+
+              <p className="mt-1 text-[7px] font-semibold tracking-[0.25em] text-[#a88b91]">
+                WORLDS BEYOND STORIES
+              </p>
+            </div>
           </Link>
 
           <div className="hidden text-center sm:block">
-            <p className="text-sm font-bold">{story.title}</p>
+            <p className="text-sm font-bold">
+              {story.title}
+            </p>
+
             <p className={`text-xs ${theme.muted}`}>
               Chapter {chapter}
-              {currentChapter.title ? ` · ${currentChapter.title}` : ''}
+              {currentChapter.title
+                ? ` · ${currentChapter.title}`
+                : ''}
             </p>
           </div>
 
@@ -373,7 +453,7 @@ export default function Reader() {
 
             <button
               onClick={() => setShowSettings(!showSettings)}
-              className={`rounded-lg border ${theme.border} p-2 transition hover:border-purple-400`}
+              className={`rounded-lg border ${theme.border} p-2 transition hover:border-[#c69aa1]/60`}
               aria-label="Reader settings"
               aria-expanded={showSettings}
             >
@@ -382,19 +462,23 @@ export default function Reader() {
 
             <button
               onClick={toggleFullscreen}
-              className={`rounded-lg border ${theme.border} p-2 transition hover:border-purple-400`}
+              className={`rounded-lg border ${theme.border} p-2 transition hover:border-[#c69aa1]/60`}
               aria-label="Toggle fullscreen"
             >
-              {fullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+              {fullscreen ? (
+                <Minimize size={18} />
+              ) : (
+                <Maximize size={18} />
+              )}
             </button>
 
           </div>
         </div>
 
         {/* READING PROGRESS */}
-        <div className="h-1 bg-white/5">
+        <div className="h-1 bg-black/10">
           <div
-            className="h-full bg-purple-500 transition-all duration-150"
+            className={`h-full ${theme.progress} transition-all duration-150`}
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -417,8 +501,8 @@ export default function Reader() {
                       onClick={() => updateSetting('width', width)}
                       className={`rounded-lg border px-3 py-3 text-xs font-semibold capitalize transition ${
                         readerSettings.width === width
-                          ? 'border-purple-500 bg-purple-500/15 text-purple-400'
-                          : `${theme.border} hover:border-purple-400`
+                          ? 'border-[#c69aa1] bg-[#c69aa1]/15 text-[#c69aa1]'
+                          : `${theme.border} hover:border-[#c69aa1]/50`
                       }`}
                     >
                       {width}
@@ -427,7 +511,7 @@ export default function Reader() {
                 </div>
               </div>
 
-              {/* BACKGROUND */}
+              {/* READING BACKGROUND */}
               <div>
                 <p className="mb-3 text-sm font-bold">
                   Reading background
@@ -439,8 +523,8 @@ export default function Reader() {
                     onClick={() => updateSetting('background', 'dark')}
                     className={`flex items-center justify-center gap-2 rounded-lg border px-2 py-3 text-xs font-semibold transition ${
                       readerSettings.background === 'dark'
-                        ? 'border-purple-500 bg-purple-500/15 text-purple-400'
-                        : `${theme.border} hover:border-purple-400`
+                        ? 'border-[#c69aa1] bg-[#c69aa1]/15 text-[#c69aa1]'
+                        : `${theme.border} hover:border-[#c69aa1]/50`
                     }`}
                   >
                     <Moon size={15} />
@@ -451,8 +535,8 @@ export default function Reader() {
                     onClick={() => updateSetting('background', 'black')}
                     className={`flex items-center justify-center gap-2 rounded-lg border px-2 py-3 text-xs font-semibold transition ${
                       readerSettings.background === 'black'
-                        ? 'border-purple-500 bg-purple-500/15 text-purple-400'
-                        : `${theme.border} hover:border-purple-400`
+                        ? 'border-[#c69aa1] bg-[#c69aa1]/15 text-[#c69aa1]'
+                        : `${theme.border} hover:border-[#c69aa1]/50`
                     }`}
                   >
                     <Monitor size={15} />
@@ -463,8 +547,8 @@ export default function Reader() {
                     onClick={() => updateSetting('background', 'light')}
                     className={`flex items-center justify-center gap-2 rounded-lg border px-2 py-3 text-xs font-semibold transition ${
                       readerSettings.background === 'light'
-                        ? 'border-purple-500 bg-purple-500/15 text-purple-400'
-                        : `${theme.border} hover:border-purple-400`
+                        ? 'border-[#a66f7b] bg-[#a66f7b]/10 text-[#a66f7b]'
+                        : `${theme.border} hover:border-[#a66f7b]/50`
                     }`}
                   >
                     <Sun size={15} />
@@ -487,20 +571,24 @@ export default function Reader() {
       <section
         className="mx-auto px-3 pb-12 transition-all duration-300"
         style={{
-          maxWidth: WIDTH_OPTIONS[readerSettings.width] || WIDTH_OPTIONS.normal,
+          maxWidth:
+            WIDTH_OPTIONS[readerSettings.width] ||
+            WIDTH_OPTIONS.normal,
         }}
       >
 
+        {/* CHAPTER HEADING */}
         <div className="py-8 text-center">
+
           <Link
             to={`/manga/${id}`}
-            className={`inline-flex items-center gap-2 text-sm ${theme.secondary} transition hover:text-purple-400`}
+            className={`inline-flex items-center gap-2 text-sm ${theme.secondary} transition hover:text-[#c69aa1]`}
           >
             <ArrowLeft size={16} />
             Back to {story.title}
           </Link>
 
-          <h1 className="mt-6 text-2xl font-black sm:text-3xl">
+          <h1 className="mt-6 text-2xl font-semibold tracking-tight sm:text-3xl">
             Chapter {chapter}
           </h1>
 
@@ -510,12 +598,15 @@ export default function Reader() {
             </p>
           )}
 
-          <p className={`mt-2 text-xs ${theme.muted}`}>
+          <p className={`mt-3 text-[10px] font-semibold uppercase tracking-[0.25em] ${theme.muted}`}>
             ABYSSORA · {pages.length} pages
           </p>
+
+          <div className="mx-auto mt-5 h-px w-16 bg-[#c69aa1]/40" />
+
         </div>
 
-        {/* ACTUAL UPLOADED CHAPTER PAGES */}
+        {/* ACTUAL CHAPTER PAGES */}
         <div className="space-y-1">
 
           {pages.length > 0 ? (
@@ -525,18 +616,23 @@ export default function Reader() {
                 src={page}
                 alt={`${story.title} Chapter ${chapter} Page ${index + 1}`}
                 loading={index < 2 ? 'eager' : 'lazy'}
-                className="block h-auto w-full"
+                onLoad={handlePageLoad}
+                className="mx-auto block h-auto w-full"
               />
             ))
           ) : (
-            <div className={`rounded-2xl border ${theme.border} ${theme.panel} px-5 py-16 text-center`}>
+            <div
+              className={`rounded-2xl border ${theme.border} ${theme.panel} px-5 py-16 text-center`}
+            >
               <AlertCircle
                 size={35}
                 className={`mx-auto ${theme.muted}`}
               />
-              <h2 className="mt-4 text-lg font-bold">
+
+              <h2 className="mt-4 text-lg font-semibold">
                 No pages available
               </h2>
+
               <p className={`mt-2 text-sm ${theme.secondary}`}>
                 This chapter has been published, but it has no page images.
               </p>
@@ -546,16 +642,20 @@ export default function Reader() {
         </div>
 
         {/* END OF CHAPTER */}
-        <div className="my-10 rounded-2xl border border-purple-500/20 bg-purple-500/[0.05] p-8 text-center">
+        <div className="my-10 rounded-2xl border border-[#c69aa1]/20 bg-[#c69aa1]/[0.05] p-8 text-center">
 
-          <Sparkles className="mx-auto text-purple-400" size={28} />
+          <Emblem size={35} />
 
-          <h2 className="mt-4 text-xl font-black">
+          <h2 className="mt-4 text-xl font-semibold">
             End of Chapter {chapter}
           </h2>
 
           <p className={`mt-2 text-sm ${theme.secondary}`}>
             Thanks for reading on ABYSSORA.
+          </p>
+
+          <p className={`mt-4 text-[9px] font-semibold uppercase tracking-[0.3em] ${theme.muted}`}>
+            Worlds beyond stories
           </p>
 
         </div>
@@ -568,7 +668,7 @@ export default function Reader() {
               onClick={() =>
                 navigate(chapterUrl(previousChapter.chapter_number))
               }
-              className={`flex items-center justify-center gap-2 rounded-xl border ${theme.border} px-4 py-4 text-sm font-semibold transition hover:border-purple-500`}
+              className={`flex items-center justify-center gap-2 rounded-xl border ${theme.border} px-4 py-4 text-sm font-semibold transition hover:border-[#c69aa1]/60`}
             >
               <ArrowLeft size={17} />
               Previous
@@ -587,7 +687,7 @@ export default function Reader() {
               onClick={() =>
                 navigate(chapterUrl(nextChapter.chapter_number))
               }
-              className="flex items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-4 text-sm font-bold text-white transition hover:bg-purple-500"
+              className={`flex items-center justify-center gap-2 rounded-xl px-4 py-4 text-sm font-bold transition ${theme.button}`}
             >
               Next chapter
               <ArrowRight size={17} />
@@ -604,35 +704,43 @@ export default function Reader() {
         </div>
 
         {/* CHAPTER SELECTOR */}
-        <div className="mt-5 flex items-center justify-center gap-3">
+        <div className="mt-6 flex items-center justify-center gap-3">
 
-          <List size={17} className="text-purple-400" />
+          <List size={17} className="text-[#c69aa1]" />
 
-          <select
-            value={chapter}
-            onChange={(e) => navigate(chapterUrl(Number(e.target.value)))}
-            className={`max-w-full rounded-xl border ${theme.border} ${theme.panel} px-4 py-3 text-sm ${theme.text} outline-none`}
-          >
-            {[...publishedChapters]
-              .reverse()
-              .map((item) => (
-                <option
-                  key={item.id}
-                  value={item.chapter_number}
-                >
-                  Chapter {item.chapter_number}
-                  {item.title ? ` - ${item.title}` : ''}
-                </option>
-              ))}
-          </select>
+          <div className="relative">
+            <select
+              value={chapter}
+              onChange={(event) =>
+                navigate(chapterUrl(Number(event.target.value)))
+              }
+              className={`max-w-full appearance-none rounded-xl border ${theme.border} ${theme.panel} px-4 py-3 pr-10 text-sm ${theme.text} outline-none focus:border-[#c69aa1]`}
+            >
+              {[...publishedChapters]
+                .reverse()
+                .map((item) => (
+                  <option
+                    key={item.id}
+                    value={item.chapter_number}
+                  >
+                    Chapter {item.chapter_number}
+                    {item.title ? ` - ${item.title}` : ''}
+                  </option>
+                ))}
+            </select>
 
-          <ChevronDown size={16} className={theme.muted} />
+            <ChevronDown
+              size={16}
+              className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 ${theme.muted}`}
+            />
+          </div>
 
         </div>
 
+        {/* RETURN TO MANGA */}
         <Link
           to={`/manga/${id}`}
-          className={`mt-8 flex items-center justify-center gap-2 text-sm ${theme.secondary} transition hover:text-purple-400`}
+          className={`mt-8 flex items-center justify-center gap-2 text-sm ${theme.secondary} transition hover:text-[#c69aa1]`}
         >
           <Home size={16} />
           Return to manga details
@@ -640,8 +748,9 @@ export default function Reader() {
 
       </section>
 
+      {/* FOOTER */}
       <footer className={`border-t ${theme.border} py-7 text-center text-xs ${theme.muted}`}>
-        © 2026 ABYSSORA
+        © 2026 ABYSSORA. A universe of stories awaits.
       </footer>
 
     </main>
