@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -24,6 +23,28 @@ const C = {
 }
 
 const genres = ['All', 'Action', 'Fantasy', 'Magic', 'Adventure', 'Drama']
+
+// GET GENRES FROM BOTH SUPABASE FIELDS
+function getComicGenres(item) {
+  const values = []
+
+  if (Array.isArray(item.genres)) {
+    values.push(...item.genres)
+  } else if (typeof item.genres === 'string') {
+    values.push(...item.genres.split(','))
+  }
+
+  if (typeof item.genre === 'string') {
+    values.push(item.genre)
+  }
+
+  return [...new Set(
+    values
+      .filter((value) => typeof value === 'string')
+      .map((value) => value.trim())
+      .filter(Boolean)
+  )]
+}
 
 const genreDiscoveries = [
   {
@@ -63,7 +84,6 @@ const genreDiscoveries = [
   },
 ]
 
-
 function Emblem({ size = 42 }) {
   return (
     <img
@@ -75,8 +95,6 @@ function Emblem({ size = 42 }) {
     />
   )
 }
-
-
 
 function Brand({ compact = false }) {
   return (
@@ -100,7 +118,6 @@ function Brand({ compact = false }) {
   )
 }
 
-
 function Eyebrow({ icon: Icon, children }) {
   return (
     <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.24em] text-[#c69aa1]">
@@ -115,13 +132,16 @@ function SectionHeading({ eyebrow, title, description, icon: Icon, action }) {
     <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
       <div>
         <Eyebrow icon={Icon}>{eyebrow}</Eyebrow>
+
         <h2 className="text-2xl font-semibold tracking-tight text-[#f1e7e8] sm:text-3xl">
           {title}
         </h2>
+
         {description && (
           <p className="mt-2 text-sm text-[#99898e]">{description}</p>
         )}
       </div>
+
       {action}
     </div>
   )
@@ -186,13 +206,18 @@ function MangaCard({ item, index, bookmarks, toggleBookmark }) {
             <Star size={11} fill="currentColor" />
             {item.rating}
           </div>
+
           <h3 className="line-clamp-2 text-sm font-bold leading-snug text-white">
             {item.title}
           </h3>
+
           <p className="mt-1 text-[10px] text-white/65">{item.chapter}</p>
         </div>
       </div>
-      <p className="mt-2 truncate text-xs text-[#95858a]">{item.genre || 'Manga'}</p>
+
+      <p className="mt-2 truncate text-xs text-[#95858a]">
+        {item.genre || 'Manga'}
+      </p>
     </article>
   )
 }
@@ -236,18 +261,21 @@ export default function Home() {
         return
       }
 
-      const formattedManga = (data || []).map((item) => ({
-        ...item,
-        coverImage: item.cover_image,
-        chapters: item.chapters ?? 0,
-        chapter: item.chapter || `Chapter ${item.chapters ?? 0}`,
-        rating: String(item.rating ?? 0),
-        genres: Array.isArray(item.genres)
-          ? item.genres
-          : [item.genre].filter(Boolean),
-        colors: item.colors || 'from-[#392b31] via-[#211a1e] to-[#110e10]',
-        symbol: item.symbol || '✧',
-      }))
+      const formattedManga = (data || []).map((item) => {
+        const itemGenres = getComicGenres(item)
+
+        return {
+          ...item,
+          coverImage: item.cover_image,
+          chapters: item.chapters ?? 0,
+          chapter: item.chapter || `Chapter ${item.chapters ?? 0}`,
+          rating: String(item.rating ?? 0),
+          genres: itemGenres,
+          genre: item.genre || itemGenres[0] || '',
+          colors: item.colors || 'from-[#392b31] via-[#211a1e] to-[#110e10]',
+          symbol: item.symbol || '✧',
+        }
+      })
 
       setManga(formattedManga)
       setLoadingManga(false)
@@ -266,7 +294,10 @@ export default function Home() {
 
     const getCurrentSession = async () => {
       const { data, error } = await supabase.auth.getSession()
-      if (!error && mounted) setUser(data.session?.user ?? null)
+
+      if (!error && mounted) {
+        setUser(data.session?.user ?? null)
+      }
     }
 
     getCurrentSession()
@@ -289,6 +320,7 @@ export default function Home() {
 
     const checkAdmin = async () => {
       setIsAdmin(false)
+
       if (!user) return
 
       const { data, error } = await supabase
@@ -363,7 +395,9 @@ export default function Home() {
         return
       }
 
-      if (mounted) setBookmarks((data || []).map((item) => item.manga_id))
+      if (mounted) {
+        setBookmarks((data || []).map((item) => item.manga_id))
+      }
     }
 
     loadBookmarks()
@@ -394,7 +428,9 @@ export default function Home() {
 
       if (error) {
         console.error('Could not load reading history:', error.message)
+
         if (mounted) setLoadingHistory(false)
+
         return
       }
 
@@ -402,6 +438,7 @@ export default function Home() {
         const history = (data || [])
           .map((entry) => {
             const story = manga.find((item) => item.id === entry.manga_id)
+
             if (!story) return null
 
             return {
@@ -432,7 +469,9 @@ export default function Home() {
   // LOGOUT
   const handleLogout = async () => {
     setLoggingOut(true)
+
     const { error } = await supabase.auth.signOut()
+
     setLoggingOut(false)
 
     if (error) {
@@ -487,32 +526,40 @@ export default function Home() {
     const searchTerm = search.trim().toLowerCase()
 
     const results = manga.filter((item) => {
-      const itemGenres = item.genres || [item.genre].filter(Boolean)
+      const itemGenres = getComicGenres(item)
       const title = String(item.title || '')
-      const genre = String(item.genre || '')
 
       const matchesSearch =
         title.toLowerCase().includes(searchTerm) ||
-        genre.toLowerCase().includes(searchTerm) ||
         itemGenres.some((value) =>
-          String(value).toLowerCase().includes(searchTerm)
+          value.toLowerCase().includes(searchTerm)
         )
 
       const matchesGenre =
-        activeGenre === 'All' || itemGenres.includes(activeGenre)
+        activeGenre === 'All' ||
+        itemGenres.some(
+          (value) => value.toLowerCase() === activeGenre.toLowerCase()
+        )
 
       return matchesSearch && matchesGenre
     })
 
     return [...results].sort((a, b) => {
-      if (sortBy === 'rating') return Number(b.rating) - Number(a.rating)
-      if (sortBy === 'title') return a.title.localeCompare(b.title)
+      if (sortBy === 'rating') {
+        return Number(b.rating) - Number(a.rating)
+      }
+
+      if (sortBy === 'title') {
+        return a.title.localeCompare(b.title)
+      }
+
       if (sortBy === 'latest') {
         return (
           Number(b.year || 0) - Number(a.year || 0) ||
           Number(b.chapters || 0) - Number(a.chapters || 0)
         )
       }
+
       return 0
     })
   }, [manga, search, activeGenre, sortBy])
@@ -527,7 +574,10 @@ export default function Home() {
 
   const scrollTo = (id) => {
     setMenuOpen(false)
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+
+    document.getElementById(id)?.scrollIntoView({
+      behavior: 'smooth',
+    })
   }
 
   return (
@@ -542,12 +592,15 @@ export default function Home() {
             <Link to="/" className="flex items-center gap-2 text-[#f1e7e8] transition hover:text-[#dfb9bf]">
               <HomeIcon size={15} /> Home
             </Link>
+
             <button onClick={() => scrollTo('trending')} className="flex items-center gap-2 transition hover:text-[#dfb9bf]">
               <Flame size={15} /> Trending
             </button>
+
             <button onClick={() => scrollTo('latest')} className="flex items-center gap-2 transition hover:text-[#dfb9bf]">
               <Clock3 size={15} /> Latest
             </button>
+
             <button onClick={() => scrollTo('explore')} className="flex items-center gap-2 transition hover:text-[#dfb9bf]">
               <Compass size={15} /> Explore
             </button>
@@ -568,6 +621,7 @@ export default function Home() {
           <div className="hidden items-center gap-2 sm:flex">
             <div className="flex items-center gap-2 rounded-xl border border-[#c69aa1]/15 bg-[#211a1e] px-3 py-2 focus-within:border-[#c69aa1]/50">
               <Search size={16} className="text-[#89777c]" />
+
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -577,6 +631,7 @@ export default function Home() {
                 placeholder="Search stories..."
                 className="w-32 bg-transparent text-xs text-[#f1e7e8] outline-none placeholder:text-[#76676c] lg:w-40"
               />
+
               {search && (
                 <button onClick={() => setSearch('')} aria-label="Clear search">
                   <X size={14} className="text-[#ad9da1]" />
@@ -593,6 +648,7 @@ export default function Home() {
                   className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-[#c69aa1]/15 transition hover:border-[#c69aa1]/50 hover:bg-[#211a1e]"
                 >
                   <Bell size={17} className="text-[#c69aa1]" />
+
                   {unreadCount > 0 && (
                     <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b66f7b] px-1 text-[9px] font-bold text-white">
                       {unreadCount > 99 ? '99+' : unreadCount}
@@ -623,6 +679,7 @@ export default function Home() {
                 <Link to="/login" className="rounded-xl border border-[#c69aa1]/20 px-4 py-2 text-xs font-semibold text-[#e4d5d8] transition hover:border-[#c69aa1]/60">
                   Sign in
                 </Link>
+
                 <Link to="/register" className="rounded-xl bg-[#c69aa1] px-4 py-2 text-xs font-bold text-[#211619] transition hover:bg-[#dfb9bf]">
                   Register
                 </Link>
@@ -644,44 +701,72 @@ export default function Home() {
           <div className="border-t border-[#c69aa1]/10 bg-[#191417] p-5 md:hidden">
             <div className="mb-4 flex items-center gap-2 rounded-xl border border-[#c69aa1]/15 bg-[#110e10] px-3 py-3">
               <Search size={17} className="text-[#89777c]" />
+
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search stories..."
                 className="w-full bg-transparent text-sm outline-none placeholder:text-[#76676c]"
               />
-              {search && <button onClick={() => setSearch('')} aria-label="Clear search"><X size={15} /></button>}
+
+              {search && (
+                <button onClick={() => setSearch('')} aria-label="Clear search">
+                  <X size={15} />
+                </button>
+              )}
             </div>
 
-            <button onClick={() => scrollTo('trending')} className="block w-full border-b border-[#c69aa1]/10 py-3 text-left text-sm text-[#c8b9bd]">Trending</button>
-            <button onClick={() => scrollTo('latest')} className="block w-full border-b border-[#c69aa1]/10 py-3 text-left text-sm text-[#c8b9bd]">Latest</button>
-            <button onClick={() => scrollTo('explore')} className="block w-full border-b border-[#c69aa1]/10 py-3 text-left text-sm text-[#c8b9bd]">Explore</button>
+            <button onClick={() => scrollTo('trending')} className="block w-full border-b border-[#c69aa1]/10 py-3 text-left text-sm text-[#c8b9bd]">
+              Trending
+            </button>
+
+            <button onClick={() => scrollTo('latest')} className="block w-full border-b border-[#c69aa1]/10 py-3 text-left text-sm text-[#c8b9bd]">
+              Latest
+            </button>
+
+            <button onClick={() => scrollTo('explore')} className="block w-full border-b border-[#c69aa1]/10 py-3 text-left text-sm text-[#c8b9bd]">
+              Explore
+            </button>
 
             {user ? (
               <div className="mt-4 space-y-3">
                 <Link to="/notifications" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-xl border border-[#c69aa1]/15 p-3 text-sm text-[#dfb9bf]">
                   <Bell size={17} /> Notifications
-                  {unreadCount > 0 && <span className="ml-auto rounded-full bg-[#b66f7b] px-2 py-1 text-[10px] text-white">{unreadCount}</span>}
+
+                  {unreadCount > 0 && (
+                    <span className="ml-auto rounded-full bg-[#b66f7b] px-2 py-1 text-[10px] text-white">
+                      {unreadCount}
+                    </span>
+                  )}
                 </Link>
+
                 <Link to="/library" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-xl border border-[#c69aa1]/15 p-3 text-sm text-[#dfb9bf]">
                   <LibraryIcon size={17} /> My Library
                 </Link>
+
                 {isAdmin && (
                   <Link to="/admin" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-xl border border-[#c69aa1]/15 p-3 text-sm text-[#dfb9bf]">
                     <ShieldCheck size={17} /> Admin Dashboard
                   </Link>
                 )}
+
                 <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-xl border border-[#c69aa1]/15 p-3 text-sm text-[#c8b9bd]">
                   <UserRound size={17} /> {username}
                 </Link>
+
                 <button onClick={handleLogout} disabled={loggingOut} className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/20 p-3 text-sm text-red-300 disabled:opacity-50">
                   <LogOut size={16} /> {loggingOut ? 'Logging out...' : 'Logout'}
                 </button>
               </div>
             ) : (
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <Link to="/login" onClick={() => setMenuOpen(false)} className="rounded-xl border border-[#c69aa1]/20 px-4 py-3 text-center text-sm font-semibold">Sign in</Link>
-                <Link to="/register" onClick={() => setMenuOpen(false)} className="rounded-xl bg-[#c69aa1] px-4 py-3 text-center text-sm font-bold text-[#211619]">Register</Link>
+                <Link to="/login" onClick={() => setMenuOpen(false)} className="rounded-xl border border-[#c69aa1]/20 px-4 py-3 text-center text-sm font-semibold">
+                  Sign in
+                </Link>
+
+                <Link to="/register" onClick={() => setMenuOpen(false)} className="rounded-xl bg-[#c69aa1] px-4 py-3 text-center text-sm font-bold text-[#211619]">
+                  Register
+                </Link>
               </div>
             )}
           </div>
@@ -693,14 +778,18 @@ export default function Home() {
         {/* HERO */}
         <section className="relative mt-7 min-h-[420px] overflow-hidden rounded-[26px] border border-[#c69aa1]/20 bg-[#191417] md:min-h-[470px]">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_40%,rgba(156,103,116,0.17),transparent_50%),linear-gradient(115deg,#21191d_0%,#171215_55%,#110e10_100%)]" />
+
           <div className="absolute -right-20 -top-32 h-96 w-96 rounded-full border border-[#c69aa1]/10" />
+
           <div className="absolute -right-8 -top-20 h-72 w-72 rounded-full border border-[#c69aa1]/10" />
+
           <div className="absolute bottom-[-150px] right-[18%] h-80 w-80 rounded-full bg-[#9e6674]/10 blur-[90px]" />
 
           <div className="relative z-10 flex min-h-[420px] items-center px-7 py-14 md:min-h-[470px] md:px-14 lg:px-20">
             <div className="max-w-2xl">
               <div className="mb-7 inline-flex items-center gap-3 rounded-full border border-[#c69aa1]/25 bg-[#c69aa1]/[0.07] px-4 py-2">
                 <Emblem size={18} />
+
                 <span className="text-[9px] font-bold tracking-[0.24em] text-[#dfb9bf]">
                   WORLDS BEYOND STORIES
                 </span>
@@ -724,6 +813,7 @@ export default function Home() {
                 >
                   Explore the library <ArrowUpRight size={17} />
                 </button>
+
                 <button
                   onClick={() => scrollTo('trending')}
                   className="rounded-xl border border-[#c69aa1]/25 bg-white/[0.025] px-6 py-3.5 text-sm font-semibold text-[#e4d5d8] transition hover:border-[#c69aa1]/60 hover:bg-white/[0.06]"
@@ -778,12 +868,20 @@ export default function Home() {
                         <span className="text-4xl text-white/70">{item.symbol}</span>
                       )}
                     </Link>
+
                     <div className="flex min-w-0 flex-1 flex-col justify-between">
                       <div>
                         <p className="text-[10px] font-bold uppercase tracking-wider text-[#c69aa1]">{item.genre}</p>
-                        <Link to={`/manga/${item.id}`} className="mt-1 line-clamp-2 text-sm font-bold transition hover:text-[#dfb9bf]">{item.title}</Link>
-                        <p className="mt-2 text-xs text-[#95858a]">Last read: Chapter {item.lastReadChapter}</p>
+
+                        <Link to={`/manga/${item.id}`} className="mt-1 line-clamp-2 text-sm font-bold transition hover:text-[#dfb9bf]">
+                          {item.title}
+                        </Link>
+
+                        <p className="mt-2 text-xs text-[#95858a]">
+                          Last read: Chapter {item.lastReadChapter}
+                        </p>
                       </div>
+
                       <Link to={`/manga/${item.id}/chapter/${item.lastReadChapter}`} className="mt-3 inline-flex w-fit items-center gap-2 rounded-lg bg-[#c69aa1]/15 px-3 py-2 text-xs font-bold text-[#dfb9bf] transition hover:bg-[#c69aa1]/25">
                         <Play size={12} fill="currentColor" /> Continue
                       </Link>
@@ -807,6 +905,7 @@ export default function Home() {
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#c69aa1]/10 text-[#c69aa1]">
                 <Icon size={18} />
               </div>
+
               <div>
                 <p className="text-sm font-semibold text-[#e9dcde]">{heading}</p>
                 <p className="mt-1 text-[11px] text-[#89777c]">{sub}</p>
@@ -832,9 +931,12 @@ export default function Home() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {genreDiscoveries.map((genre) => {
               const Icon = genre.icon
+
+              // CORRECT GENRE COUNT
               const count = manga.filter((item) =>
-                (item.genres || [item.genre].filter(Boolean)).some(
-                  (value) => String(value).toLowerCase() === genre.name.toLowerCase()
+                getComicGenres(item).some(
+                  (value) =>
+                    value.toLowerCase() === genre.name.toLowerCase()
                 )
               ).length
 
@@ -845,19 +947,34 @@ export default function Home() {
                   className="group relative min-h-48 overflow-hidden rounded-2xl border border-[#c69aa1]/12 bg-[#191417] p-5 transition duration-300 hover:-translate-y-1 hover:border-[#c69aa1]/40"
                 >
                   <div className={`absolute inset-0 bg-gradient-to-br ${genre.glow} to-transparent opacity-80 transition group-hover:opacity-100`} />
+
                   <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/[0.025] blur-2xl transition group-hover:scale-150" />
+
                   <div className="relative z-10 flex h-full flex-col">
                     <div className="mb-5 flex items-start justify-between">
                       <div className={`flex h-11 w-11 items-center justify-center rounded-xl border border-[#c69aa1]/15 bg-[#110e10]/50 ${genre.tint}`}>
                         <Icon size={21} />
                       </div>
+
                       <ArrowUpRight size={17} className="text-[#76676c] transition group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-[#dfb9bf]" />
                     </div>
-                    <h3 className="text-lg font-semibold text-[#f1e7e8]">{genre.name}</h3>
-                    <p className="mt-2 min-h-10 text-xs leading-5 text-[#99898e]">{genre.description}</p>
+
+                    <h3 className="text-lg font-semibold text-[#f1e7e8]">
+                      {genre.name}
+                    </h3>
+
+                    <p className="mt-2 min-h-10 text-xs leading-5 text-[#99898e]">
+                      {genre.description}
+                    </p>
+
                     <div className="mt-auto flex items-center gap-2 pt-4">
-                      <span className={`text-sm font-bold ${genre.tint}`}>{count}</span>
-                      <span className="text-[10px] text-[#817277]">manga available</span>
+                      <span className={`text-sm font-bold ${genre.tint}`}>
+                        {count}
+                      </span>
+
+                      <span className="text-[10px] text-[#817277]">
+                        manga available
+                      </span>
                     </div>
                   </div>
                 </Link>
@@ -908,12 +1025,14 @@ export default function Home() {
           <div className="mb-5 grid gap-3 sm:grid-cols-[1fr_auto]">
             <div className="flex items-center gap-3 rounded-xl border border-[#c69aa1]/15 bg-[#191417] px-4 py-3 transition focus-within:border-[#c69aa1]/50">
               <Search size={18} className="shrink-0 text-[#89777c]" />
+
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by manga title or genre..."
                 className="w-full bg-transparent text-sm text-[#f1e7e8] outline-none placeholder:text-[#76676c]"
               />
+
               {search && (
                 <button onClick={() => setSearch('')} aria-label="Clear search" className="text-[#89777c] hover:text-white">
                   <X size={16} />
@@ -923,6 +1042,7 @@ export default function Home() {
 
             <div className="flex items-center gap-2 rounded-xl border border-[#c69aa1]/15 bg-[#191417] px-4 py-3">
               <ArrowDownUp size={16} className="shrink-0 text-[#c69aa1]" />
+
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -940,6 +1060,7 @@ export default function Home() {
             <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#89777c]">
               <SlidersHorizontal size={13} /> Filter by genre
             </div>
+
             <div className="flex flex-wrap gap-2">
               {genres.map((genre) => (
                 genre === 'All' ? (
@@ -970,9 +1091,17 @@ export default function Home() {
 
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-[#c69aa1]/10 pb-4">
             <p className="text-xs text-[#95858a]">
-              Showing <span className="font-bold text-[#f1e7e8]">{filteredManga.length}</span> of{' '}
-              <span className="font-bold text-[#f1e7e8]">{manga.length}</span> manga
+              Showing{' '}
+              <span className="font-bold text-[#f1e7e8]">
+                {filteredManga.length}
+              </span>{' '}
+              of{' '}
+              <span className="font-bold text-[#f1e7e8]">
+                {manga.length}
+              </span>{' '}
+              manga
             </p>
+
             {hasActiveFilters && (
               <button onClick={clearFilters} className="flex items-center gap-2 text-xs font-semibold text-[#c69aa1] transition hover:text-[#dfb9bf]">
                 <X size={13} /> Clear filters
@@ -986,14 +1115,26 @@ export default function Home() {
             </div>
           ) : mangaError ? (
             <div className="rounded-2xl border border-red-400/20 bg-red-400/5 p-8 text-center">
-              <p className="font-semibold text-red-300">Unable to load comics</p>
-              <p className="mt-2 break-words text-sm text-[#ad9da1]">{mangaError}</p>
+              <p className="font-semibold text-red-300">
+                Unable to load comics
+              </p>
+
+              <p className="mt-2 break-words text-sm text-[#ad9da1]">
+                {mangaError}
+              </p>
             </div>
           ) : filteredManga.length === 0 ? (
             <div className="rounded-2xl border border-[#c69aa1]/10 bg-[#191417] p-12 text-center">
               <Search size={28} className="mx-auto text-[#76676c]" />
-              <p className="mt-4 font-semibold text-[#e4d5d8]">No stories found.</p>
-              <p className="mt-2 text-sm text-[#89777c]">Try another title or genre.</p>
+
+              <p className="mt-4 font-semibold text-[#e4d5d8]">
+                No stories found.
+              </p>
+
+              <p className="mt-2 text-sm text-[#89777c]">
+                Try another title or genre.
+              </p>
+
               <button onClick={clearFilters} className="mt-5 rounded-xl bg-[#c69aa1] px-5 py-2.5 text-sm font-bold text-[#211619] transition hover:bg-[#dfb9bf]">
                 Clear filters
               </button>
@@ -1043,19 +1184,30 @@ export default function Home() {
                         className="absolute inset-0 h-full w-full object-cover"
                       />
                     )}
-                    {!item.coverImage && <span className="text-xl text-white/80">{item.symbol}</span>}
+
+                    {!item.coverImage && (
+                      <span className="text-xl text-white/80">{item.symbol}</span>
+                    )}
                   </div>
 
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-sm font-semibold text-[#e9dcde] transition group-hover:text-[#dfb9bf]">
                       {item.title}
                     </h3>
-                    <p className="mt-1 text-xs text-[#89777c]">{item.genre || 'Manga'}</p>
+
+                    <p className="mt-1 text-xs text-[#89777c]">
+                      {item.genre || 'Manga'}
+                    </p>
                   </div>
 
                   <div className="text-right">
-                    <p className="text-xs font-semibold text-[#c69aa1]">{item.chapter}</p>
-                    <p className="mt-1 text-[9px] text-[#817277]">Latest chapter</p>
+                    <p className="text-xs font-semibold text-[#c69aa1]">
+                      {item.chapter}
+                    </p>
+
+                    <p className="mt-1 text-[9px] text-[#817277]">
+                      Latest chapter
+                    </p>
                   </div>
 
                   <ChevronRight size={16} className="shrink-0 text-[#76676c] transition group-hover:translate-x-1 group-hover:text-[#c69aa1]" />
@@ -1063,7 +1215,9 @@ export default function Home() {
               ))}
 
             {!loadingManga && manga.length === 0 && (
-              <p className="p-8 text-center text-sm text-[#89777c]">No manga has been added yet.</p>
+              <p className="p-8 text-center text-sm text-[#89777c]">
+                No manga has been added yet.
+              </p>
             )}
           </div>
         </section>
@@ -1071,15 +1225,24 @@ export default function Home() {
         {/* CLOSING BANNER */}
         <section className="relative mt-16 overflow-hidden rounded-2xl border border-[#c69aa1]/15 bg-[#191417] px-7 py-10 text-center md:py-14">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(198,154,161,0.09),transparent_65%)]" />
+
           <div className="relative">
-            <div className="mb-4 flex justify-center"><Emblem size={45} /></div>
-            <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-[#c69aa1]">ABYSSORA</p>
+            <div className="mb-4 flex justify-center">
+              <Emblem size={45} />
+            </div>
+
+            <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-[#c69aa1]">
+              ABYSSORA
+            </p>
+
             <h2 className="mt-3 font-serif text-3xl italic text-[#f1e7e8] sm:text-4xl">
               There is always another world.
             </h2>
+
             <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#99898e]">
               Your next favourite story might be one chapter away.
             </p>
+
             <button onClick={() => scrollTo('explore')} className="mt-7 inline-flex items-center gap-2 rounded-xl border border-[#c69aa1]/30 px-5 py-3 text-xs font-bold text-[#dfb9bf] transition hover:bg-[#c69aa1]/10">
               Find your next story <ArrowUpRight size={15} />
             </button>
@@ -1093,6 +1256,7 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <Brand />
           </div>
+
           <p className="text-center text-[10px] tracking-wide text-[#76676c]">
             © 2026 ABYSSORA. Built for story lovers.
           </p>

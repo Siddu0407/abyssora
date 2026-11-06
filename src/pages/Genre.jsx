@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -7,9 +7,11 @@ import {
   Star,
   Compass,
   ArrowUpRight,
+  LoaderCircle,
+  AlertCircle,
 } from 'lucide-react'
 
-import { manga } from '../data/manga'
+import { supabase } from '../lib/supabase'
 
 function Emblem({ size = 42 }) {
   return (
@@ -43,26 +45,86 @@ function Brand() {
   )
 }
 
+function getGenres(comic) {
+  if (Array.isArray(comic.genres) && comic.genres.length > 0) {
+    return comic.genres.filter((genre) => typeof genre === 'string')
+  }
+
+  if (typeof comic.genre === 'string' && comic.genre.trim()) {
+    return [comic.genre]
+  }
+
+  return []
+}
+
+function formatComic(comic) {
+  return {
+    ...comic,
+    coverImage: comic.cover_image || comic.cover || comic.image || '',
+    genres: getGenres(comic),
+    genre: getGenres(comic)[0] || 'Uncategorized',
+    chapter:
+      comic.chapter ||
+      (comic.chapters ? `${comic.chapters} Chapters` : 'No chapters yet'),
+    status: comic.status || 'Ongoing',
+    rating: comic.rating || 'N/A',
+  }
+}
+
 export default function Genre() {
   const { genreName } = useParams()
+
+  const [manga, setManga] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   const formattedGenre = genreName
     ? genreName.charAt(0).toUpperCase() + genreName.slice(1).toLowerCase()
     : ''
 
+  useEffect(() => {
+    let isMounted = true
+
+    async function fetchManga() {
+      setLoading(true)
+      setError('')
+
+      const { data, error: fetchError } = await supabase
+        .from('comics')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (!isMounted) return
+
+      if (fetchError) {
+        console.error('Error loading genre manga:', fetchError)
+        setError('Unable to load manga right now. Please try again.')
+        setManga([])
+      } else {
+        setManga((data || []).map(formatComic))
+      }
+
+      setLoading(false)
+    }
+
+    fetchManga()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
   const genreManga = useMemo(() => {
     return manga.filter((item) =>
-      (item.genres || [item.genre]).some(
+      item.genres.some(
         (genre) =>
-          typeof genre === 'string' &&
-          genre.toLowerCase() === formattedGenre.toLowerCase()
+          genre.trim().toLowerCase() === formattedGenre.trim().toLowerCase()
       )
     )
-  }, [formattedGenre])
+  }, [manga, formattedGenre])
 
   return (
     <main className="min-h-screen bg-[#110e10] text-[#f4e9e9]">
-
       {/* HEADER */}
       <header className="sticky top-0 z-40 border-b border-[#dcb1b9]/10 bg-[#110e10]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
@@ -80,7 +142,6 @@ export default function Genre() {
 
       {/* MAIN CONTENT */}
       <section className="mx-auto max-w-7xl px-5 pb-20 pt-9 sm:px-8 sm:pt-12">
-
         {/* BREADCRUMB */}
         <div className="mb-10 flex flex-wrap items-center gap-2 text-[11px] font-medium text-[#89777c]">
           <Link to="/" className="transition hover:text-[#d5a2aa]">
@@ -93,14 +154,11 @@ export default function Genre() {
 
           <ChevronRight size={13} />
 
-          <span className="text-[#e0cbd0]">
-            {formattedGenre}
-          </span>
+          <span className="text-[#e0cbd0]">{formattedGenre}</span>
         </div>
 
         {/* HERO */}
         <div className="relative overflow-hidden rounded-3xl border border-[#dcb1b9]/10 bg-[#191417] p-6 sm:p-10 lg:p-12">
-
           <div className="pointer-events-none absolute -right-20 -top-24 h-80 w-80 rounded-full bg-[#c58d98]/[0.07] blur-3xl" />
 
           <div className="pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-[#c58d98]/[0.04] blur-3xl" />
@@ -144,31 +202,57 @@ export default function Genre() {
           </div>
         </div>
 
-        {/* MANGA COLLECTION */}
+        {/* COLLECTION */}
         <div className="mt-12">
-          <div className="mb-7 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#c58d98]">
-                The collection
-              </p>
+          <div className="mb-7">
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#c58d98]">
+              The collection
+            </p>
 
-              <h2 className="mt-2 font-display text-3xl font-semibold text-[#f4e9e9] sm:text-4xl">
-                Explore stories
-              </h2>
+            <h2 className="mt-2 font-display text-3xl font-semibold text-[#f4e9e9] sm:text-4xl">
+              Explore stories
+            </h2>
 
-              <p className="mt-2 text-xs text-[#89777c]">
-                Handpicked worlds waiting to be discovered.
-              </p>
-            </div>
-
-            {genreManga.length > 0 && (
-              <span className="shrink-0 rounded-lg border border-[#dcb1b9]/10 bg-[#191417] px-3 py-2 text-[10px] font-semibold text-[#b9a8ac]">
-                {genreManga.length} titles
-              </span>
-            )}
+            <p className="mt-2 text-xs text-[#89777c]">
+              Discover stories from the ABYSSORA collection.
+            </p>
           </div>
 
-          {genreManga.length > 0 ? (
+          {/* LOADING */}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center rounded-3xl border border-[#dcb1b9]/10 bg-[#191417] px-6 py-20 text-center">
+              <LoaderCircle
+                size={36}
+                className="animate-spin text-[#c58d98]"
+              />
+
+              <p className="mt-5 text-sm text-[#a9959a]">
+                Loading manga collection...
+              </p>
+            </div>
+          ) : error ? (
+            /* ERROR */
+            <div className="rounded-3xl border border-red-400/20 bg-[#191417] px-6 py-16 text-center">
+              <AlertCircle
+                size={36}
+                className="mx-auto text-red-400"
+              />
+
+              <h2 className="mt-5 font-display text-2xl font-semibold">
+                Something went wrong
+              </h2>
+
+              <p className="mt-3 text-sm text-[#a9959a]">{error}</p>
+
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-6 rounded-xl bg-[#c58d98] px-6 py-3 text-sm font-bold text-[#211619] transition hover:bg-[#d5a2aa]"
+              >
+                Try again
+              </button>
+            </div>
+          ) : genreManga.length > 0 ? (
+            /* MANGA GRID */
             <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4 xl:grid-cols-5">
               {genreManga.map((item) => (
                 <Link
@@ -176,9 +260,7 @@ export default function Genre() {
                   to={`/manga/${item.id}`}
                   className="group min-w-0"
                 >
-                  {/* COVER */}
                   <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-[#dcb1b9]/10 bg-gradient-to-br from-stone-900 via-[#38272d] to-black transition duration-300 group-hover:-translate-y-1 group-hover:border-[#c58d98]/40">
-
                     {item.coverImage ? (
                       <img
                         src={item.coverImage}
@@ -198,15 +280,13 @@ export default function Genre() {
 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
 
-                    {/* STATUS */}
                     <div className="absolute left-3 top-3 rounded-lg border border-white/10 bg-black/55 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-[#e5c4ca] backdrop-blur-md">
-                      {item.status || 'Ongoing'}
+                      {item.status}
                     </div>
 
-                    {/* RATING */}
                     <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-[11px] font-bold text-[#e7c9a3]">
                       <Star size={13} fill="currentColor" />
-                      {item.rating || 'N/A'}
+                      {item.rating}
                     </div>
 
                     <div className="absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white opacity-0 backdrop-blur-md transition group-hover:opacity-100">
@@ -214,19 +294,18 @@ export default function Genre() {
                     </div>
                   </div>
 
-                  {/* DETAILS */}
                   <div className="mt-3">
                     <h2 className="truncate text-sm font-bold text-[#f0e4e6] transition group-hover:text-[#d5a2aa] sm:text-base">
                       {item.title}
                     </h2>
 
                     <p className="mt-1.5 truncate text-[10px] text-[#89777c]">
-                      {item.chapter || `${item.chapters || 0} Chapters`}
+                      {item.chapter}
                     </p>
 
                     <div className="mt-2 flex items-center justify-between gap-2">
                       <span className="truncate text-[10px] text-[#b9a8ac]">
-                        {item.genre || formattedGenre}
+                        {item.genre}
                       </span>
 
                       <ChevronRight
@@ -239,6 +318,7 @@ export default function Genre() {
               ))}
             </div>
           ) : (
+            /* EMPTY STATE */
             <div className="rounded-3xl border border-[#dcb1b9]/10 bg-[#191417] px-6 py-20 text-center">
               <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl border border-[#c58d98]/20 bg-[#c58d98]/[0.07]">
                 <BookOpen size={34} className="text-[#c58d98]" />
@@ -249,7 +329,9 @@ export default function Genre() {
               </h2>
 
               <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-[#a9959a]">
-                We couldn't find any manga in this genre yet. Check out the full collection to discover something new.
+                There are no manga in this genre yet. Once you publish a manga
+                with this genre through the Admin dashboard, it will appear
+                here.
               </p>
 
               <Link
