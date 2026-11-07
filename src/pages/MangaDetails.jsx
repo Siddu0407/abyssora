@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
@@ -16,6 +17,8 @@ import {
 
 import { supabase } from '../lib/supabase'
 
+const SITE_URL = 'https://abyssora-ten.vercel.app'
+
 function Emblem({ size = 36 }) {
   return (
     <img
@@ -26,6 +29,36 @@ function Emblem({ size = 36 }) {
       className="object-contain"
     />
   )
+}
+
+// Safely create or update SEO metadata.
+function setMeta(attribute, key, content) {
+  let element = document.head.querySelector(
+    `meta[${attribute}="${key}"]`
+  )
+
+  if (!element) {
+    element = document.createElement('meta')
+    element.setAttribute(attribute, key)
+    document.head.appendChild(element)
+  }
+
+  element.setAttribute('content', content)
+}
+
+// Safely create or update the canonical URL.
+function setCanonical(url) {
+  let element = document.head.querySelector(
+    'link[rel="canonical"]'
+  )
+
+  if (!element) {
+    element = document.createElement('link')
+    element.setAttribute('rel', 'canonical')
+    document.head.appendChild(element)
+  }
+
+  element.setAttribute('href', url)
 }
 
 export default function MangaDetails() {
@@ -118,6 +151,114 @@ export default function MangaDetails() {
       cancelled = true
     }
   }, [id])
+
+  // SEO: Update title, description, canonical and social metadata.
+  useEffect(() => {
+    if (!story) return
+
+    const mangaTitle = String(story.title || 'Manga').trim()
+
+    const pageTitle = `${mangaTitle} | Read Manga Online - ABYSSORA`
+
+    const fallbackDescription =
+      `Read ${mangaTitle} on ABYSSORA. Explore manga details, genres, and the latest published chapters.`
+
+    const rawDescription = String(
+      story.description || fallbackDescription
+    ).replace(/\s+/g, ' ').trim()
+
+    const description =
+      rawDescription.length > 160
+        ? `${rawDescription.slice(0, 157)}...`
+        : rawDescription
+
+    const canonicalUrl =
+      `${SITE_URL}/manga/${encodeURIComponent(story.id)}`
+
+    const coverImage = story.coverImage
+      ? new URL(story.coverImage, SITE_URL).href
+      : ''
+
+    // Browser title.
+    document.title = pageTitle
+
+    // Standard SEO metadata.
+    setMeta('name', 'description', description)
+    setMeta('name', 'robots', 'index, follow')
+
+    // Canonical URL.
+    setCanonical(canonicalUrl)
+
+    // Open Graph metadata.
+    setMeta('property', 'og:type', 'website')
+    setMeta('property', 'og:site_name', 'ABYSSORA')
+    setMeta('property', 'og:title', pageTitle)
+    setMeta('property', 'og:description', description)
+    setMeta('property', 'og:url', canonicalUrl)
+
+    // Twitter metadata.
+    setMeta(
+      'name',
+      'twitter:card',
+      coverImage ? 'summary_large_image' : 'summary'
+    )
+    setMeta('name', 'twitter:title', pageTitle)
+    setMeta('name', 'twitter:description', description)
+
+    if (coverImage) {
+      setMeta('property', 'og:image', coverImage)
+      setMeta('name', 'twitter:image', coverImage)
+    } else {
+      document.head
+        .querySelector('meta[property="og:image"]')
+        ?.remove()
+
+      document.head
+        .querySelector('meta[name="twitter:image"]')
+        ?.remove()
+    }
+  }, [story])
+
+  // Restore default metadata when leaving the manga page.
+  useEffect(() => {
+    return () => {
+      document.title = 'ABYSSORA | Read Manga Online'
+
+      setMeta(
+        'name',
+        'description',
+        'Discover and read manga online on ABYSSORA. Explore stories, genres, and the latest chapters.'
+      )
+
+      setCanonical(`${SITE_URL}/`)
+
+      setMeta('property', 'og:type', 'website')
+      setMeta('property', 'og:site_name', 'ABYSSORA')
+      setMeta('property', 'og:title', 'ABYSSORA | Read Manga Online')
+      setMeta(
+        'property',
+        'og:description',
+        'Discover and read manga online on ABYSSORA.'
+      )
+      setMeta('property', 'og:url', `${SITE_URL}/`)
+
+      setMeta('name', 'twitter:card', 'summary')
+      setMeta('name', 'twitter:title', 'ABYSSORA | Read Manga Online')
+      setMeta(
+        'name',
+        'twitter:description',
+        'Discover and read manga online on ABYSSORA.'
+      )
+
+      document.head
+        .querySelector('meta[property="og:image"]')
+        ?.remove()
+
+      document.head
+        .querySelector('meta[name="twitter:image"]')
+        ?.remove()
+    }
+  }, [])
 
   // Check the signed-in user's bookmark.
   useEffect(() => {
