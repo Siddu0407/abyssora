@@ -20,6 +20,11 @@
 
     <meta name="robots" content="index, follow" />
 
+    <link
+      rel="canonical"
+      href="https://abyssora-ten.vercel.app/"
+    />
+
     <meta property="og:title" content="ABYSSORA - Read Manga Online" />
     <meta
       property="og:description"
@@ -27,6 +32,7 @@
     />
     <meta property="og:url" content="https://abyssora-ten.vercel.app/" />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ABYSSORA" />
 
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="ABYSSORA - Read Manga Online" />
@@ -34,7 +40,38 @@
       name="twitter:description"
       content="Discover and read manga online with ABYSSORA."
     />
+
+    <!-- ABYSSORA Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://abyssora-ten.vercel.app/#organization",
+            "name": "ABYSSORA",
+            "url": "https://abyssora-ten.vercel.app/",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://abyssora-ten.vercel.app/abyssora-mark.svg"
+            }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://abyssora-ten.vercel.app/#website",
+            "name": "ABYSSORA",
+            "url": "https://abyssora-ten.vercel.app/",
+            "description": "Explore manga series, browse the library, and read your favourite stories online with ABYSSORA.",
+            "publisher": {
+              "@id": "https://abyssora-ten.vercel.app/#organization"
+            },
+            "inLanguage": "en"
+          }
+        ]
+      }
+    </script>
   </head>
+
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
