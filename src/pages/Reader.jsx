@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
@@ -18,6 +19,8 @@ import {
 } from 'lucide-react'
 
 import { supabase } from '../lib/supabase'
+import ChapterReactions from './ChapterReactions'
+import ChapterComments from './ChapterComments'
 
 const DEFAULT_SETTINGS = {
   width: 'normal',
@@ -640,6 +643,18 @@ export default function Reader() {
           )}
 
         </div>
+
+        {/* CHAPTER REACTIONS */}
+        <ChapterReactions
+          chapterId={currentChapter.id}
+          theme={theme}
+        />
+
+        {/* CHAPTER COMMENTS */}
+        <ChapterComments
+          chapterId={currentChapter.id}
+          theme={theme}
+        />
 
         {/* END OF CHAPTER */}
         <div className="my-10 rounded-2xl border border-[#c69aa1]/20 bg-[#c69aa1]/[0.05] p-8 text-center">
