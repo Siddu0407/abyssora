@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import {
   BookOpen,
@@ -14,11 +15,14 @@ import {
   EyeOff,
   FileImage,
   X,
+  Sparkles,
 } from 'lucide-react'
 
 import { supabase } from '../lib/supabase'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
+const MAX_IMAGE_WIDTH = 1800
+const JPEG_QUALITY = 0.84
 
 const panel =
   'rounded-2xl border border-[#dcafb9]/15 bg-[#191417]'
@@ -54,6 +58,141 @@ function Notice({ type = 'error', children }) {
   )
 }
 
+function formatFileSize(bytes) {
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(0)} KB`
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+}
+
+// Load an image using the browser's image decoder.
+async function decodeImage(file) {
+  if (typeof createImageBitmap === 'function') {
+    return createImageBitmap(file)
+  }
+
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file)
+    const image = new window.Image()
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+
+      resolve({
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+        image,
+        close() {},
+      })
+    }
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error(`Could not read ${file.name}.`))
+    }
+
+    image.src = objectUrl
+  })
+}
+
+// Convert an image to an optimized JPG in the browser.
+async function compressImage(file) {
+  let decodedImage
+
+  try {
+    decodedImage = await decodeImage(file)
+
+    const originalWidth = decodedImage.width
+    const originalHeight = decodedImage.height
+
+    if (!originalWidth || !originalHeight) {
+      throw new Error(`Invalid image dimensions: ${file.name}`)
+    }
+
+    // Do not enlarge images. Only resize when they exceed the limit.
+    const scale = Math.min(
+      1,
+      MAX_IMAGE_WIDTH / originalWidth
+    )
+
+    const width = Math.max(
+      1,
+      Math.round(originalWidth * scale)
+    )
+
+    const height = Math.max(
+      1,
+      Math.round(originalHeight * scale)
+    )
+
+    const canvas = document.createElement('canvas')
+
+    canvas.width = width
+    canvas.height = height
+
+    const context = canvas.getContext('2d', {
+      alpha: false,
+    })
+
+    if (!context) {
+      throw new Error('Your browser could not prepare the image.')
+    }
+
+    // White background prevents transparent images from turning black.
+    context.fillStyle = '#ffffff'
+    context.fillRect(0, 0, width, height)
+
+    context.imageSmoothingEnabled = true
+    context.imageSmoothingQuality = 'high'
+
+    context.drawImage(
+      decodedImage,
+      0,
+      0,
+      width,
+      height
+    )
+
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (result) => {
+          if (result) {
+            resolve(result)
+          } else {
+            reject(
+              new Error(`Could not compress ${file.name}.`)
+            )
+          }
+        },
+        'image/jpeg',
+        JPEG_QUALITY
+      )
+    })
+
+    // Keep the original if JPG conversion would increase its size.
+    if (blob.size >= file.size) {
+      return file
+    }
+
+    const originalName = file.name.replace(/\.[^/.]+$/, '')
+    const optimizedName = `${originalName}.jpg`
+
+    return new File(
+      [blob],
+      optimizedName,
+      {
+        type: 'image/jpeg',
+        lastModified: Date.now(),
+      }
+    )
+  } finally {
+    if (decodedImage?.close) {
+      decodedImage.close()
+    }
+  }
+}
+
 export default function ChapterManagement({ comics = [] }) {
   const [selectedComicId, setSelectedComicId] = useState('')
   const [chapters, setChapters] = useState([])
@@ -65,6 +204,7 @@ export default function ChapterManagement({ comics = [] }) {
   const [publishImmediately, setPublishImmediately] = useState(true)
 
   const [saving, setSaving] = useState(false)
+  const [processingFiles, setProcessingFiles] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
   const [updatingId, setUpdatingId] = useState(null)
 
@@ -128,18 +268,28 @@ export default function ChapterManagement({ comics = [] }) {
     return Number(data || 0)
   }
 
-  const handleFileSelection = (event) => {
+  // Select and optimize chapter images.
+  const handleFileSelection = async (event) => {
     const files = Array.from(event.target.files || [])
+
+    event.target.value = ''
 
     if (files.length === 0) return
 
+    const supportedTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+    ]
+
     const invalidFile = files.find(
-      (file) => !file.type.startsWith('image/')
+      (file) => !supportedTypes.includes(file.type)
     )
 
     if (invalidFile) {
-      setError(`${invalidFile.name} is not a valid image.`)
-      event.target.value = ''
+      setError(
+        `${invalidFile.name} is not supported. Please select JPG, PNG or WEBP images.`
+      )
       return
     }
 
@@ -148,20 +298,59 @@ export default function ChapterManagement({ comics = [] }) {
     )
 
     if (oversizedFile) {
-      setError(`${oversizedFile.name} is larger than 10 MB.`)
-      event.target.value = ''
+      setError(
+        `${oversizedFile.name} is larger than 10 MB.`
+      )
       return
     }
 
+    setProcessingFiles(true)
     setError('')
     setSuccess('')
 
-    setSelectedFiles((current) => [
-      ...current,
-      ...files,
-    ])
+    try {
+      const optimizedFiles = []
 
-    event.target.value = ''
+      for (const file of files) {
+        const optimizedFile = await compressImage(file)
+        optimizedFiles.push(optimizedFile)
+      }
+
+      const totalOriginalSize = files.reduce(
+        (total, file) => total + file.size,
+        0
+      )
+
+      const totalOptimizedSize = optimizedFiles.reduce(
+        (total, file) => total + file.size,
+        0
+      )
+
+      setSelectedFiles((current) => [
+        ...current,
+        ...optimizedFiles,
+      ])
+
+      if (totalOptimizedSize < totalOriginalSize) {
+        const savedPercentage = Math.round(
+          (1 - totalOptimizedSize / totalOriginalSize) * 100
+        )
+
+        setSuccess(
+          `${optimizedFiles.length} page image(s) optimized. Saved approximately ${savedPercentage}% of the original file size.`
+        )
+      } else {
+        setSuccess(
+          `${optimizedFiles.length} page image(s) processed and ready for upload.`
+        )
+      }
+    } catch (err) {
+      setError(
+        err.message || 'Could not optimize the selected images.'
+      )
+    } finally {
+      setProcessingFiles(false)
+    }
   }
 
   const moveFile = (index, direction) => {
@@ -190,7 +379,9 @@ export default function ChapterManagement({ comics = [] }) {
 
   const uploadChapterPage = async (file, index) => {
     const extension =
-      file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      file.type === 'image/jpeg'
+        ? 'jpg'
+        : file.name.split('.').pop()?.toLowerCase() || 'jpg'
 
     const safeComicId = selectedComicId.replace(
       /[^a-zA-Z0-9_-]/g,
@@ -228,6 +419,11 @@ export default function ChapterManagement({ comics = [] }) {
 
     if (!Number.isInteger(number) || number < 1) {
       setError('Enter a valid chapter number greater than zero.')
+      return
+    }
+
+    if (processingFiles) {
+      setError('Please wait until image optimization finishes.')
       return
     }
 
@@ -355,7 +551,6 @@ export default function ChapterManagement({ comics = [] }) {
       )
 
       if (!chapter.is_published) {
-        // This was a draft, and it has just been published.
         try {
           const notifiedCount = await notifyReadersAboutChapter(
             chapter.chapter_number,
@@ -445,6 +640,11 @@ export default function ChapterManagement({ comics = [] }) {
       setDeletingId(null)
     }
   }
+
+  const totalSelectedSize = selectedFiles.reduce(
+    (total, file) => total + file.size,
+    0
+  )
 
   return (
     <section className="mt-12">
@@ -578,27 +778,54 @@ export default function ChapterManagement({ comics = [] }) {
                 Chapter Page Images *
               </label>
 
-              <label className="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#c58d98]/25 bg-[#c58d98]/[0.035] px-5 py-9 text-center transition hover:border-[#c58d98]/60 hover:bg-[#c58d98]/[0.08]">
+              <label
+                className={`group flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#c58d98]/25 bg-[#c58d98]/[0.035] px-5 py-9 text-center transition ${
+                  processingFiles || saving
+                    ? 'cursor-not-allowed opacity-50'
+                    : 'cursor-pointer hover:border-[#c58d98]/60 hover:bg-[#c58d98]/[0.08]'
+                }`}
+              >
                 <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-[#c58d98]/20 bg-[#c58d98]/10 text-[#c58d98] transition group-hover:scale-105">
-                  <Upload size={25} />
+                  {processingFiles ? (
+                    <LoaderCircle size={25} className="animate-spin" />
+                  ) : (
+                    <Upload size={25} />
+                  )}
                 </div>
 
                 <span className="text-sm font-bold text-[#eee1e3]">
-                  Click to select chapter page images
+                  {processingFiles
+                    ? 'Optimizing your images...'
+                    : 'Click to select chapter page images'}
                 </span>
 
                 <span className="mt-2 text-xs text-[#89777c]">
-                  Select multiple images · PNG, JPG or WEBP · Maximum 10 MB each
+                  Select multiple images · JPG, PNG or WEBP · Maximum 10 MB each
                 </span>
 
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   multiple
                   onChange={handleFileSelection}
+                  disabled={processingFiles || saving}
                   className="hidden"
                 />
               </label>
+
+              <div className="mt-3 flex items-start gap-2 rounded-xl border border-[#c58d98]/15 bg-[#c58d98]/[0.045] p-3">
+                <Sparkles
+                  size={16}
+                  className="mt-0.5 shrink-0 text-[#d5a2aa]"
+                />
+
+                <p className="text-xs leading-relaxed text-[#b9a8ac]">
+                  ABYSSORA automatically optimizes images in your browser
+                  before uploading. JPG quality is balanced for clear
+                  manga text and reduced storage usage. Original files
+                  are kept when compression would increase their size.
+                </p>
+              </div>
             </div>
 
             {/* Selected images */}
@@ -611,6 +838,19 @@ export default function ChapterManagement({ comics = [] }) {
 
                   <p className="text-xs text-[#89777c]">
                     Use arrows to arrange reading order.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-[#8caf9a]/15 bg-[#8caf9a]/[0.045] p-3">
+                  <p className="text-xs font-semibold text-[#a8c9b2]">
+                    <CheckCircle
+                      size={14}
+                      className="mr-1 inline"
+                    />
+                    Images ready for upload
+                  </p>
+                  <p className="mt-1 text-xs text-[#a9959a]">
+                    Total optimized size: {formatFileSize(totalSelectedSize)}
                   </p>
                 </div>
 
@@ -634,7 +874,8 @@ export default function ChapterManagement({ comics = [] }) {
                           {file.name}
                         </p>
                         <p className="text-xs text-[#89777c]">
-                          {(file.size / (1024 * 1024)).toFixed(2)} MB
+                          {formatFileSize(file.size)}
+                          {file.type === 'image/jpeg' ? ' · JPG' : ''}
                         </p>
                       </div>
 
@@ -701,10 +942,19 @@ export default function ChapterManagement({ comics = [] }) {
             {/* Submit */}
             <button
               type="submit"
-              disabled={saving || selectedFiles.length === 0}
+              disabled={
+                saving ||
+                processingFiles ||
+                selectedFiles.length === 0
+              }
               className={buttonPrimary + ' w-full'}
             >
-              {saving ? (
+              {processingFiles ? (
+                <>
+                  <LoaderCircle size={18} className="animate-spin" />
+                  Optimizing images...
+                </>
+              ) : saving ? (
                 <>
                   <LoaderCircle size={18} className="animate-spin" />
                   Uploading pages and saving chapter...
