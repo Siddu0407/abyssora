@@ -6,12 +6,12 @@ import {
   Flame, Clock3, Compass, Home as HomeIcon, Sparkles,
   ArrowUpRight, Heart, Star, BookOpen, UserRound,
   LogOut, Play, Bell, Library as LibraryIcon,
-  ArrowDownUp, SlidersHorizontal, ShieldCheck,
+  ArrowDownUp, SlidersHorizontal, ShieldCheck, Smile,
 } from 'lucide-react'
 
 import { supabase } from '../lib/supabase'
 
-const genres = ['All', 'Action', 'Fantasy', 'Magic', 'Adventure', 'Drama']
+const genres = ['All', 'Action', 'Fantasy', 'Magic', 'Adventure', 'Comedy', 'Drama']
 
 const genreDiscoveries = [
   {
@@ -43,6 +43,13 @@ const genreDiscoveries = [
     glow: 'from-[#526b5b]/25',
   },
   {
+    name: 'Comedy',
+    description: 'Light-hearted moments, clever humour and joyful surprises.',
+    icon: Smile,
+    tint: 'text-[#e2bd8c]',
+    glow: 'from-[#856b42]/25',
+  },
+  {
     name: 'Drama',
     description: 'Emotional journeys and unforgettable characters.',
     icon: Heart,
@@ -54,22 +61,32 @@ const genreDiscoveries = [
 function getComicGenres(item) {
   const values = []
 
-  if (Array.isArray(item.genres)) {
-    values.push(...item.genres)
-  } else if (typeof item.genres === 'string') {
-    values.push(...item.genres.split(','))
+  const addGenres = (value) => {
+    if (Array.isArray(value)) {
+      value.forEach(addGenres)
+      return
+    }
+
+    if (typeof value === 'string') {
+      values.push(...value.split(/[,;|]/))
+    }
   }
 
-  if (typeof item.genre === 'string') {
-    values.push(item.genre)
-  }
+  addGenres(item.genres)
+  addGenres(item.genre)
 
-  return [...new Set(
-    values
-      .filter((value) => typeof value === 'string')
-      .map((value) => value.trim())
-      .filter(Boolean)
-  )]
+  const uniqueGenres = new Map()
+
+  values.forEach((value) => {
+    const genre = value.trim()
+    const key = genre.toLowerCase()
+
+    if (genre && !uniqueGenres.has(key)) {
+      uniqueGenres.set(key, genre)
+    }
+  })
+
+  return [...uniqueGenres.values()]
 }
 
 function Emblem({ size = 42 }) {
@@ -195,7 +212,7 @@ function MangaCard({ item, index, bookmarks, toggleBookmark }) {
       </div>
 
       <p className="mt-2 truncate text-xs text-[#95858a]">
-        {item.genre || 'Manga'}
+        {getComicGenres(item).join(' · ') || 'Manga'}
       </p>
     </article>
   )
@@ -804,7 +821,7 @@ export default function Home() {
 
                   <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-[#c4b2b7]">
                     <span className="rounded-full border border-[#c69aa1]/25 bg-black/20 px-3 py-1.5">
-                      {activeFeatured.genre || 'Manhwa'}
+                      {getComicGenres(activeFeatured).join(' · ') || 'Manhwa'}
                     </span>
 
                     <span className="flex items-center gap-1 text-[#e6c99a]">
@@ -980,7 +997,7 @@ export default function Home() {
                     <div className="flex min-w-0 flex-1 flex-col justify-between">
                       <div>
                         <p className="text-[10px] font-bold uppercase tracking-wider text-[#c69aa1]">
-                          {item.genre}
+                          {getComicGenres(item).join(' · ')}
                         </p>
 
                         <Link to={`/manga/${item.id}`} className="mt-1 line-clamp-2 text-sm font-bold transition hover:text-[#dfb9bf]">
@@ -1048,7 +1065,7 @@ export default function Home() {
             }
           />
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6">
             {genreDiscoveries.map((genre) => {
               const Icon = genre.icon
 
@@ -1308,7 +1325,7 @@ export default function Home() {
                     </h3>
 
                     <p className="mt-1 text-xs text-[#89777c]">
-                      {item.genre || 'Manga'}
+                      {getComicGenres(item).join(' · ') || 'Manga'}
                     </p>
                   </div>
 

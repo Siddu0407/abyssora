@@ -13,6 +13,10 @@ import {
   LoaderCircle,
   AlertCircle,
   CheckCircle,
+  ShieldCheck,
+  ExternalLink,
+  Palette,
+  FileText,
 } from 'lucide-react'
 
 import { supabase } from '../lib/supabase'
@@ -31,7 +35,6 @@ function Emblem({ size = 36 }) {
   )
 }
 
-// Safely create or update SEO metadata.
 function setMeta(attribute, key, content) {
   let element = document.head.querySelector(
     `meta[${attribute}="${key}"]`
@@ -46,7 +49,6 @@ function setMeta(attribute, key, content) {
   element.setAttribute('content', content)
 }
 
-// Safely create or update the canonical URL.
 function setCanonical(url) {
   let element = document.head.querySelector(
     'link[rel="canonical"]'
@@ -59,6 +61,87 @@ function setCanonical(url) {
   }
 
   element.setAttribute('href', url)
+}
+
+// Extract creator and licence details from the existing description.
+function getCredits(description, author) {
+  const lines = String(description || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  const findLine = (pattern) =>
+    lines.find((line) => pattern.test(line))
+
+  const creatorLine = findLine(
+    /^(original artwork and story|original creator|creator|artist)\s*:/i
+  )
+
+  const translatorLine = findLine(
+    /^(english translation|translation|translator)\s*:/i
+  )
+
+  const sourceLine = findLine(
+    /^(original source|source|official source)\s*:/i
+  )
+
+  const licenceLine = findLine(
+    /^(licensed under|licence|license)\s*:/i
+  )
+
+  const reproductionLine = findLine(
+    /^(this is an unchanged reproduction|reproduction)\s*:/i
+  )
+
+  const extractValue = (line) =>
+    line ? line.replace(/^[^:]+:\s*/, '').trim() : ''
+
+  const licenceText = extractValue(licenceLine)
+
+  const licenceUrlMatch = licenceText.match(
+    /https?:\/\/\S+/i
+  )
+
+  const sourceUrlMatch = extractValue(sourceLine).match(
+    /https?:\/\/\S+/i
+  )
+
+  const licenceName = licenceText
+    .replace(/https?:\/\/\S+/i, '')
+    .replace(/[()]/g, '')
+    .trim()
+
+  const creator = extractValue(creatorLine)
+
+  const creditLines = [
+    creatorLine,
+    translatorLine,
+    sourceLine,
+    licenceLine,
+    reproductionLine,
+  ].filter(Boolean)
+
+  const remainingDescription = lines
+    .filter((line) => !creditLines.includes(line))
+    .join('\n')
+    .trim()
+
+  return {
+    creator: creator || author || '',
+    translator: extractValue(translatorLine),
+    sourceUrl: sourceUrlMatch?.[0] || '',
+    licenceName,
+    licenceUrl: licenceUrlMatch?.[0] || '',
+    reproduction: extractValue(reproductionLine),
+    hasCredits: Boolean(
+      creatorLine ||
+      translatorLine ||
+      sourceLine ||
+      licenceLine ||
+      reproductionLine
+    ),
+    remainingDescription,
+  }
 }
 
 export default function MangaDetails() {
@@ -75,7 +158,6 @@ export default function MangaDetails() {
   const [bookmarkSaving, setBookmarkSaving] = useState(false)
   const [bookmarkMessage, setBookmarkMessage] = useState('')
 
-  // Load manga details and published chapters.
   useEffect(() => {
     let cancelled = false
 
@@ -101,12 +183,13 @@ export default function MangaDetails() {
           return
         }
 
-        const { data: chapterData, error: chapterError } = await supabase
-          .from('chapters')
-          .select('id, chapter_number, title, pages, is_published')
-          .eq('comic_id', id)
-          .eq('is_published', true)
-          .order('chapter_number', { ascending: false })
+        const { data: chapterData, error: chapterError } =
+          await supabase
+            .from('chapters')
+            .select('id, chapter_number, title, pages, is_published')
+            .eq('comic_id', id)
+            .eq('is_published', true)
+            .order('chapter_number', { ascending: false })
 
         if (chapterError) throw chapterError
         if (cancelled) return
@@ -139,9 +222,7 @@ export default function MangaDetails() {
           setError('Could not load this manga. Please try again.')
         }
       } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
+        if (!cancelled) setLoading(false)
       }
     }
 
@@ -152,19 +233,17 @@ export default function MangaDetails() {
     }
   }, [id])
 
-  // SEO: Update title, description, canonical and social metadata.
   useEffect(() => {
     if (!story) return
 
     const mangaTitle = String(story.title || 'Manga').trim()
-
     const pageTitle = `${mangaTitle} | Read Manga Online - ABYSSORA`
 
-    const fallbackDescription =
-      `Read ${mangaTitle} on ABYSSORA. Explore manga details, genres, and the latest published chapters.`
+    const credits = getCredits(story.description, story.author)
 
     const rawDescription = String(
-      story.description || fallbackDescription
+      credits.remainingDescription ||
+        `Read ${mangaTitle} on ABYSSORA. Explore manga details, genres, and the latest published chapters.`
     ).replace(/\s+/g, ' ').trim()
 
     const description =
@@ -179,24 +258,18 @@ export default function MangaDetails() {
       ? new URL(story.coverImage, SITE_URL).href
       : ''
 
-    // Browser title.
     document.title = pageTitle
 
-    // Standard SEO metadata.
     setMeta('name', 'description', description)
     setMeta('name', 'robots', 'index, follow')
-
-    // Canonical URL.
     setCanonical(canonicalUrl)
 
-    // Open Graph metadata.
     setMeta('property', 'og:type', 'website')
     setMeta('property', 'og:site_name', 'ABYSSORA')
     setMeta('property', 'og:title', pageTitle)
     setMeta('property', 'og:description', description)
     setMeta('property', 'og:url', canonicalUrl)
 
-    // Twitter metadata.
     setMeta(
       'name',
       'twitter:card',
@@ -219,7 +292,6 @@ export default function MangaDetails() {
     }
   }, [story])
 
-  // Restore default metadata when leaving the manga page.
   useEffect(() => {
     return () => {
       document.title = 'ABYSSORA | Read Manga Online'
@@ -260,7 +332,6 @@ export default function MangaDetails() {
     }
   }, [])
 
-  // Check the signed-in user's bookmark.
   useEffect(() => {
     let cancelled = false
 
@@ -332,7 +403,6 @@ export default function MangaDetails() {
     }
   }, [id])
 
-  // Add or remove a bookmark.
   async function toggleBookmark() {
     if (bookmarkSaving) return
 
@@ -387,7 +457,6 @@ export default function MangaDetails() {
     }
   }
 
-  // Loading screen.
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#110e10] text-[#f1e7e8]">
@@ -404,7 +473,6 @@ export default function MangaDetails() {
     )
   }
 
-  // Error or missing manga.
   if (error || !story) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-[#110e10] px-5 text-[#f1e7e8]">
@@ -429,14 +497,13 @@ export default function MangaDetails() {
   }
 
   const latestChapter = chapters[0]?.chapter_number || 0
+  const credits = getCredits(story.description, story.author)
 
   return (
     <main className="min-h-screen bg-[#110e10] text-[#f1e7e8]">
-
       {/* NAVIGATION */}
       <header className="sticky top-0 z-40 border-b border-[#c69aa1]/10 bg-[#110e10]/95 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3.5">
-
           <Link to="/" className="group flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#c69aa1]/25 bg-[#211a1e] transition group-hover:border-[#c69aa1]/60">
               <Emblem size={32} />
@@ -460,13 +527,11 @@ export default function MangaDetails() {
             <ArrowLeft size={16} />
             Back to library
           </Link>
-
         </div>
       </header>
 
       {/* HERO */}
       <section className="relative overflow-hidden border-b border-[#c69aa1]/10">
-
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_40%,rgba(156,103,116,0.16),transparent_50%),linear-gradient(115deg,#21191d_0%,#171215_55%,#110e10_100%)]" />
 
         <div className="absolute -right-20 top-0 h-96 w-96 rounded-full border border-[#c69aa1]/10" />
@@ -474,10 +539,8 @@ export default function MangaDetails() {
         <div className="absolute -right-8 top-10 h-72 w-72 rounded-full border border-[#c69aa1]/10" />
 
         <div className="relative mx-auto grid max-w-7xl gap-10 px-5 py-12 md:grid-cols-[280px_1fr] md:py-16">
-
           {/* COVER */}
           <div className="group relative mx-auto aspect-[3/4] w-full max-w-[280px] overflow-hidden rounded-2xl border border-[#c69aa1]/20 bg-[#211a1e] shadow-2xl shadow-black/40">
-
             {!imageFailed && story.coverImage ? (
               <img
                 src={story.coverImage}
@@ -503,12 +566,10 @@ export default function MangaDetails() {
                 ABYSSORA
               </p>
             </div>
-
           </div>
 
           {/* INFORMATION */}
           <div className="flex flex-col justify-center">
-
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <span className="rounded-full border border-[#c69aa1]/25 bg-[#c69aa1]/10 px-3 py-1 text-xs font-bold text-[#dfb9bf]">
                 {story.status}
@@ -527,7 +588,6 @@ export default function MangaDetails() {
 
             {/* STATISTICS */}
             <div className="mt-6 flex flex-wrap gap-6 text-sm text-[#ad9da1]">
-
               <span className="flex items-center gap-2">
                 <Star
                   size={17}
@@ -547,7 +607,6 @@ export default function MangaDetails() {
                   {story.year}
                 </span>
               )}
-
             </div>
 
             {/* GENRES */}
@@ -566,7 +625,7 @@ export default function MangaDetails() {
 
             {/* DESCRIPTION */}
             <p className="mt-7 max-w-2xl whitespace-pre-line text-sm leading-8 text-[#ad9da1]">
-              {story.description ||
+              {credits.remainingDescription ||
                 'No description has been added for this story yet.'}
             </p>
 
@@ -581,7 +640,6 @@ export default function MangaDetails() {
 
             {/* ACTIONS */}
             <div className="mt-8 flex flex-wrap gap-3">
-
               <a
                 href="#chapters"
                 className="flex items-center gap-2 rounded-xl bg-[#c69aa1] px-6 py-3.5 text-sm font-bold text-[#211619] transition hover:-translate-y-0.5 hover:bg-[#dfb9bf]"
@@ -617,13 +675,11 @@ export default function MangaDetails() {
                       ? 'Saved to library'
                       : 'Save to library'}
               </button>
-
             </div>
 
             {/* BOOKMARK FEEDBACK */}
             {bookmarkMessage && (
               <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-
                 {bookmarkMessage.includes('Successfully') ||
                 bookmarkMessage.includes('Removed') ? (
                   <CheckCircle size={16} className="text-[#8caf9a]" />
@@ -643,22 +699,154 @@ export default function MangaDetails() {
                     Sign in
                   </Link>
                 )}
-
               </div>
             )}
-
           </div>
         </div>
       </section>
+
+      {/* CREATOR & LICENCE */}
+      {credits.hasCredits && (
+        <section className="mx-auto max-w-7xl px-5 pt-12">
+          <div className="overflow-hidden rounded-2xl border border-[#c69aa1]/20 bg-gradient-to-br from-[#21191d] to-[#151114]">
+            <div className="border-b border-[#c69aa1]/10 px-6 py-5 sm:px-8">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#c69aa1]/20 bg-[#c69aa1]/10">
+                  <ShieldCheck size={21} className="text-[#dfb9bf]" />
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#c69aa1]">
+                    Transparency & attribution
+                  </p>
+                  <h2 className="mt-1 text-xl font-semibold">
+                    Creator & Licence
+                  </h2>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-6 p-6 sm:grid-cols-2 sm:p-8">
+              {/* CREATOR */}
+              <div className="flex gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#c69aa1]/10">
+                  <Palette size={19} className="text-[#dfb9bf]" />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#89777c]">
+                    Original creator
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-[#f1e7e8]">
+                    {credits.creator}
+                  </p>
+                </div>
+              </div>
+
+              {/* TRANSLATOR */}
+              {credits.translator && (
+                <div className="flex gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#c69aa1]/10">
+                    <User size={19} className="text-[#dfb9bf]" />
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#89777c]">
+                      English translation
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-[#f1e7e8]">
+                      {credits.translator}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* LICENCE */}
+              {credits.licenceName && (
+                <div className="flex gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#c69aa1]/10">
+                    <FileText size={19} className="text-[#dfb9bf]" />
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#89777c]">
+                      Usage licence
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-[#f1e7e8]">
+                      {credits.licenceName}
+                    </p>
+
+                    {credits.licenceUrl && (
+                      <a
+                        href={credits.licenceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#dfb9bf] transition hover:text-white"
+                      >
+                        View licence
+                        <ExternalLink size={12} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ORIGINAL SOURCE */}
+              {credits.sourceUrl && (
+                <div className="flex gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#c69aa1]/10">
+                    <ExternalLink size={19} className="text-[#dfb9bf]" />
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#89777c]">
+                      Original source
+                    </p>
+                    <a
+                      href={credits.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1.5 break-all text-sm font-semibold text-[#dfb9bf] transition hover:text-white"
+                    >
+                      Visit original work
+                      <ExternalLink size={12} className="shrink-0" />
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {credits.reproduction && (
+              <div className="mx-6 mb-6 rounded-xl border border-[#8caf9a]/15 bg-[#8caf9a]/[0.06] p-4 sm:mx-8">
+                <div className="flex items-start gap-3">
+                  <CheckCircle
+                    size={17}
+                    className="mt-0.5 shrink-0 text-[#8caf9a]"
+                  />
+                  <p className="text-xs leading-6 text-[#c8b9bd]">
+                    {credits.reproduction}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="border-t border-[#c69aa1]/10 px-6 py-4 sm:px-8">
+              <p className="text-[11px] leading-6 text-[#89777c]">
+                ABYSSORA aims to respect original creators and display
+                accurate attribution and licensing information for
+                independently published works.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* CHAPTERS */}
       <section
         id="chapters"
         className="mx-auto max-w-7xl scroll-mt-24 px-5 py-12"
       >
-
         <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
-
           <div>
             <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.24em] text-[#c69aa1]">
               Continue the journey
@@ -678,11 +866,9 @@ export default function MangaDetails() {
               Latest: Chapter {latestChapter}
             </span>
           )}
-
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-[#c69aa1]/20 bg-[#191417]">
-
           {chapters.length > 0 ? (
             chapters.slice(0, 5).map((chapter, index) => (
               <Link
@@ -694,7 +880,6 @@ export default function MangaDetails() {
                     : ''
                 }`}
               >
-
                 <div>
                   <p className="text-sm font-semibold text-[#e9dcde] transition group-hover:text-[#dfb9bf]">
                     Chapter {chapter.chapter_number}
@@ -706,7 +891,6 @@ export default function MangaDetails() {
                 </div>
 
                 <div className="flex items-center gap-3">
-
                   {index === 0 && (
                     <span className="rounded-full bg-[#c69aa1]/10 px-2 py-1 text-[10px] font-bold text-[#dfb9bf]">
                       LATEST
@@ -717,14 +901,11 @@ export default function MangaDetails() {
                     size={18}
                     className="text-[#76676c] transition group-hover:translate-x-1 group-hover:text-[#c69aa1]"
                   />
-
                 </div>
-
               </Link>
             ))
           ) : (
             <div className="px-5 py-12 text-center">
-
               <BookOpen
                 size={32}
                 className="mx-auto text-[#76676c]"
@@ -737,10 +918,8 @@ export default function MangaDetails() {
               <p className="mt-2 text-sm text-[#89777c]">
                 Chapters will appear here once an administrator publishes them.
               </p>
-
             </div>
           )}
-
         </div>
 
         {chapters.length > 5 && (
@@ -748,14 +927,12 @@ export default function MangaDetails() {
             Showing the latest 5 published chapters.
           </p>
         )}
-
       </section>
 
       {/* FOOTER */}
       <footer className="border-t border-[#c69aa1]/10 bg-[#0d0a0c] px-5 py-8 text-center text-xs text-[#76676c]">
         © 2026 ABYSSORA. A universe of stories awaits.
       </footer>
-
     </main>
   )
 }
