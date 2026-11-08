@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 
 import Home from './pages/Home'
@@ -14,6 +13,7 @@ import Library from './pages/Library'
 import Genre from './pages/Genre'
 import Admin from './pages/Admin'
 import Notifications from './pages/Notifications'
+import CreatorSubmission from './pages/CreatorSubmission'
 
 function App() {
   return (
@@ -32,6 +32,7 @@ function App() {
         <Route path="/library" element={<Library />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/creator/submit" element={<CreatorSubmission />} />
       </Routes>
     </BrowserRouter>
   )

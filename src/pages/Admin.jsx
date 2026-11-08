@@ -24,6 +24,13 @@ import {
   Send,
   Megaphone,
   CheckCircle,
+  Eye,
+  Check,
+  XCircle,
+  Clock,
+  FileText,
+  ExternalLink,
+  Filter,
 } from 'lucide-react'
 
 import { supabase } from '../lib/supabase'
@@ -101,6 +108,751 @@ function Notice({ type = 'success', children }) {
     </div>
   )
 }
+
+/* =========================================================
+   CREATOR SUBMISSION MANAGEMENT
+========================================================= */
+
+function CreatorSubmissions() {
+  const [submissions, setSubmissions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [filter, setFilter] = useState('all')
+  const [selected, setSelected] = useState(null)
+  const [adminNotes, setAdminNotes] = useState('')
+  const [signedFiles, setSignedFiles] = useState([])
+  const [filesLoading, setFilesLoading] = useState(false)
+  const [reviewing, setReviewing] = useState(false)
+  const [success, setSuccess] = useState('')
+
+  const loadSubmissions = async () => {
+    setLoading(true)
+    setError('')
+
+    try {
+      const { data, error } = await supabase
+        .from('creator_submissions')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      setSubmissions(data || [])
+    } catch (err) {
+      setError(
+        err.message || 'Could not load creator submissions.'
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadSubmissions()
+  }, [])
+
+  useEffect(() => {
+    if (!selected) {
+      setSignedFiles([])
+      return
+    }
+
+    let cancelled = false
+
+    const loadPrivateFiles = async () => {
+      setFilesLoading(true)
+      setSignedFiles([])
+
+      const paths = []
+
+      if (selected.cover_file_path) {
+        paths.push({
+          path: selected.cover_file_path,
+          type: 'cover',
+          label: 'Cover image',
+        })
+      }
+
+      ;(selected.sample_file_paths || []).forEach(
+        (path, index) => {
+          paths.push({
+            path,
+            type: 'sample',
+            label: `Sample file ${index + 1}`,
+          })
+        }
+      )
+
+      try {
+        const results = await Promise.all(
+          paths.map(async (file) => {
+            const { data, error } = await supabase.storage
+              .from('creator-submissions')
+              .createSignedUrl(file.path, 600)
+
+            if (error) {
+              return {
+                ...file,
+                url: null,
+                error: error.message,
+              }
+            }
+
+            return {
+              ...file,
+              url: data?.signedUrl || null,
+              error: '',
+            }
+          })
+        )
+
+        if (!cancelled) {
+          setSignedFiles(results)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setSignedFiles([
+            {
+              label: 'File preview',
+              url: null,
+              error: err.message,
+            },
+          ])
+        }
+      } finally {
+        if (!cancelled) {
+          setFilesLoading(false)
+        }
+      }
+    }
+
+    loadPrivateFiles()
+
+    return () => {
+      cancelled = true
+    }
+  }, [selected])
+
+  const counts = {
+    all: submissions.length,
+    pending: submissions.filter(
+      (item) => item.status === 'pending'
+    ).length,
+    approved: submissions.filter(
+      (item) => item.status === 'approved'
+    ).length,
+    rejected: submissions.filter(
+      (item) => item.status === 'rejected'
+    ).length,
+  }
+
+  const visibleSubmissions =
+    filter === 'all'
+      ? submissions
+      : submissions.filter(
+          (item) => item.status === filter
+        )
+
+  const openSubmission = (submission) => {
+    setSelected(submission)
+    setAdminNotes(submission.admin_notes || '')
+    setSuccess('')
+    setError('')
+  }
+
+  const closeSubmission = () => {
+    setSelected(null)
+    setAdminNotes('')
+    setSignedFiles([])
+  }
+
+  const handleReview = async (status) => {
+    if (!selected) return
+
+    const action = status === 'approved' ? 'approve' : 'reject'
+
+    const confirmed = window.confirm(
+      `Are you sure you want to ${action} "${selected.comic_title}"?`
+    )
+
+    if (!confirmed) return
+
+    setReviewing(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const { error } = await supabase
+        .from('creator_submissions')
+        .update({
+          status,
+          admin_notes: adminNotes.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', selected.id)
+
+      if (error) throw error
+
+      setSuccess(
+        status === 'approved'
+          ? 'Submission approved. It has NOT been published automatically.'
+          : 'Submission rejected successfully.'
+      )
+
+      await loadSubmissions()
+
+      setSelected((current) =>
+        current
+          ? {
+              ...current,
+              status,
+              admin_notes: adminNotes.trim() || null,
+            }
+          : null
+      )
+    } catch (err) {
+      setError(
+        err.message || 'Could not update this submission.'
+      )
+    } finally {
+      setReviewing(false)
+    }
+  }
+
+  const statusStyle = (status) => {
+    if (status === 'approved') {
+      return 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'
+    }
+
+    if (status === 'rejected') {
+      return 'border-red-400/20 bg-red-400/10 text-red-300'
+    }
+
+    return 'border-amber-400/20 bg-amber-400/10 text-amber-300'
+  }
+
+  const formatDate = (date) => {
+    if (!date) return '—'
+
+    return new Date(date).toLocaleDateString(undefined, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+  }
+
+  return (
+    <section className="mt-12">
+      <div className="mb-6">
+        <SectionLabel icon={Users}>
+          Creator Programme
+        </SectionLabel>
+
+        <h2 className="font-display text-3xl font-semibold">
+          Creator Submissions
+        </h2>
+
+        <p className="mt-2 text-sm text-[#89777c]">
+          Review independent creator applications and their
+          submitted comic information before anything is published.
+        </p>
+      </div>
+
+      {error && (
+        <div className="mb-5">
+          <Notice type="error">{error}</Notice>
+        </div>
+      )}
+
+      {success && !selected && (
+        <div className="mb-5">
+          <Notice>{success}</Notice>
+        </div>
+      )}
+
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          {
+            label: 'All',
+            value: counts.all,
+            key: 'all',
+            icon: FileText,
+          },
+          {
+            label: 'Pending',
+            value: counts.pending,
+            key: 'pending',
+            icon: Clock,
+          },
+          {
+            label: 'Approved',
+            value: counts.approved,
+            key: 'approved',
+            icon: CheckCircle,
+          },
+          {
+            label: 'Rejected',
+            value: counts.rejected,
+            key: 'rejected',
+            icon: XCircle,
+          },
+        ].map((item) => {
+          const Icon = item.icon
+
+          return (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setFilter(item.key)}
+              className={`rounded-2xl border p-4 text-left transition ${
+                filter === item.key
+                  ? 'border-[#c58d98]/50 bg-[#c58d98]/10'
+                  : 'border-[#c69aa1]/15 bg-[#191417] hover:border-[#c69aa1]/30'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-[#ad9da1]">
+                  {item.label}
+                </span>
+                <Icon size={17} className="text-[#c58d98]" />
+              </div>
+
+              <p className="mt-2 font-display text-3xl font-semibold">
+                {item.value}
+              </p>
+            </button>
+          )
+        })}
+      </div>
+
+      <div className={`${panel} overflow-hidden`}>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#c69aa1]/15 p-5">
+          <div>
+            <h3 className="font-semibold">
+              Submitted Comics
+            </h3>
+            <p className="mt-1 text-xs text-[#89777c]">
+              Select a submission to inspect its details.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={loadSubmissions}
+            disabled={loading}
+            className="flex items-center gap-2 rounded-xl border border-[#c69aa1]/20 px-4 py-2 text-xs font-semibold text-[#d5a2aa] transition hover:bg-white/5 disabled:opacity-50"
+          >
+            <RefreshCw
+              size={15}
+              className={loading ? 'animate-spin' : ''}
+            />
+            Refresh
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="p-10 text-center">
+            <LoaderCircle
+              size={28}
+              className="mx-auto mb-3 animate-spin text-[#c58d98]"
+            />
+            <p className="text-sm text-[#ad9da1]">
+              Loading submissions...
+            </p>
+          </div>
+        ) : visibleSubmissions.length === 0 ? (
+          <div className="p-10 text-center">
+            <FileText
+              size={34}
+              className="mx-auto mb-3 text-[#c58d98]"
+            />
+            <h3 className="font-display text-xl font-semibold">
+              No submissions found
+            </h3>
+            <p className="mt-2 text-sm text-[#89777c]">
+              {filter === 'all'
+                ? 'Creator submissions will appear here when someone submits their work.'
+                : `There are no ${filter} submissions right now.`}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[#c69aa1]/10">
+            {visibleSubmissions.map((submission) => (
+              <div
+                key={submission.id}
+                className="flex flex-col gap-4 p-5 transition hover:bg-white/[0.02] sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="font-semibold text-[#f1e7e8]">
+                      {submission.comic_title}
+                    </h4>
+
+                    <span
+                      className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${statusStyle(submission.status)}`}
+                    >
+                      {submission.status}
+                    </span>
+                  </div>
+
+                  <p className="mt-1 text-xs text-[#ad9da1]">
+                    By {submission.creator_name}
+                  </p>
+
+                  <div className="mt-2 flex flex-wrap gap-3 text-xs text-[#89777c]">
+                    <span>{submission.comic_format}</span>
+                    <span>•</span>
+                    <span>
+                      {submission.chapter_count} chapters
+                    </span>
+                    <span>•</span>
+                    <span>
+                      {formatDate(submission.created_at)}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => openSubmission(submission)}
+                  className="flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[#c69aa1]/25 bg-[#c58d98]/10 px-4 py-2.5 text-sm font-semibold text-[#d5a2aa] transition hover:bg-[#c58d98]/20"
+                >
+                  <Eye size={16} />
+                  Review
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {selected && (
+        <div className="fixed inset-0 z-[150] overflow-y-auto bg-black/85 p-3 backdrop-blur-sm sm:p-6">
+          <div className="mx-auto my-5 max-w-3xl overflow-hidden rounded-2xl border border-[#c69aa1]/20 bg-[#191417] shadow-2xl">
+            <div className="flex items-center justify-between gap-4 border-b border-[#c69aa1]/15 p-5 sm:p-6">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#c58d98]">
+                  Submission Review
+                </p>
+
+                <h3 className="mt-1 truncate font-display text-2xl font-semibold">
+                  {selected.comic_title}
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeSubmission}
+                className="rounded-lg border border-[#c69aa1]/15 p-2 text-[#ad9da1] transition hover:bg-white/5 hover:text-white"
+                aria-label="Close review"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-6 p-5 sm:p-6">
+              {success && <Notice>{success}</Notice>}
+
+              {error && (
+                <Notice type="error">{error}</Notice>
+              )}
+
+              <div className="flex flex-wrap items-center gap-3">
+                <span
+                  className={`rounded-full border px-3 py-1.5 text-xs font-bold uppercase ${statusStyle(selected.status)}`}
+                >
+                  {selected.status}
+                </span>
+
+                <span className="text-xs text-[#89777c]">
+                  Submitted {formatDate(selected.created_at)}
+                </span>
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#c58d98]">
+                    Creator information
+                  </p>
+
+                  <p className="mt-3 text-sm font-semibold">
+                    {selected.creator_name}
+                  </p>
+
+                  <p className="mt-1 break-all text-sm text-[#ad9da1]">
+                    {selected.creator_email || 'No email provided'}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#c58d98]">
+                    Comic information
+                  </p>
+
+                  <p className="mt-3 text-sm font-semibold">
+                    {selected.comic_title}
+                  </p>
+
+                  <p className="mt-1 text-sm text-[#ad9da1]">
+                    {selected.comic_format}
+                  </p>
+
+                  <p className="mt-1 text-sm text-[#ad9da1]">
+                    {selected.chapter_count} chapters
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#c58d98]">
+                  Genres
+                </p>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(selected.genres || []).length > 0 ? (
+                    selected.genres.map((genre) => (
+                      <span
+                        key={genre}
+                        className="rounded-full border border-[#c69aa1]/20 bg-[#c58d98]/5 px-3 py-1.5 text-xs text-[#d5c5c8]"
+                      >
+                        {genre}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-[#89777c]">
+                      No genres provided.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#c58d98]">
+                  Synopsis
+                </p>
+
+                <p className="mt-3 whitespace-pre-wrap rounded-xl border border-[#c69aa1]/10 bg-[#110e10] p-4 text-sm leading-7 text-[#d5c5c8]">
+                  {selected.synopsis}
+                </p>
+              </div>
+
+              {selected.official_source_url && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#c58d98]">
+                    Official source
+                  </p>
+
+                  <a
+                    href={selected.official_source_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 flex items-center gap-2 break-all text-sm text-[#d5a2aa] hover:underline"
+                  >
+                    <ExternalLink
+                      size={15}
+                      className="shrink-0"
+                    />
+                    {selected.official_source_url}
+                  </a>
+                </div>
+              )}
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#c58d98]">
+                  Rights and permission declaration
+                </p>
+
+                <div className="mt-3 rounded-xl border border-[#c69aa1]/15 bg-[#110e10] p-4">
+                  <div className="flex items-start gap-2">
+                    {selected.rights_confirmation ? (
+                      <CheckCircle
+                        size={18}
+                        className="mt-0.5 shrink-0 text-emerald-400"
+                      />
+                    ) : (
+                      <AlertCircle
+                        size={18}
+                        className="mt-0.5 shrink-0 text-red-400"
+                      />
+                    )}
+
+                    <p className="text-sm text-[#d5c5c8]">
+                      {selected.rights_confirmation
+                        ? 'Creator confirmed the rights declaration.'
+                        : 'Rights declaration was not confirmed.'}
+                    </p>
+                  </div>
+
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#ad9da1]">
+                    {selected.rights_details ||
+                      'No additional rights information provided.'}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#c58d98]">
+                  Uploaded files
+                </p>
+
+                {filesLoading ? (
+                  <div className="mt-3 flex items-center gap-2 text-sm text-[#ad9da1]">
+                    <LoaderCircle
+                      size={17}
+                      className="animate-spin"
+                    />
+                    Loading private files...
+                  </div>
+                ) : signedFiles.length === 0 ? (
+                  <p className="mt-3 text-sm text-[#89777c]">
+                    No files were uploaded.
+                  </p>
+                ) : (
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    {signedFiles.map((file) => (
+                      <div
+                        key={file.path}
+                        className="overflow-hidden rounded-xl border border-[#c69aa1]/15 bg-[#110e10] p-3"
+                      >
+                        <p className="mb-3 text-xs font-semibold text-[#d5c5c8]">
+                          {file.label}
+                        </p>
+
+                        {file.url ? (
+                          <>
+                            {/\.(jpg|jpeg|png|webp)$/i.test(
+                              file.path
+                            ) ? (
+                              <a
+                                href={file.url}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <img
+                                  src={file.url}
+                                  alt={file.label}
+                                  className="max-h-64 w-full rounded-lg object-contain"
+                                />
+                              </a>
+                            ) : (
+                              <div className="flex items-center gap-3 rounded-lg bg-white/5 p-4">
+                                <FileText
+                                  size={25}
+                                  className="text-[#d5a2aa]"
+                                />
+                                <span className="text-xs text-[#ad9da1]">
+                                  Document or sample file
+                                </span>
+                              </div>
+                            )}
+
+                            <a
+                              href={file.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-3 flex items-center gap-2 text-xs font-semibold text-[#d5a2aa] hover:underline"
+                            >
+                              <ExternalLink size={14} />
+                              Open file
+                            </a>
+                          </>
+                        ) : (
+                          <p className="text-xs text-red-300">
+                            {file.error || 'Unable to open this file.'}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className={labelStyle}>
+                  Administrator Notes
+                </label>
+
+                <textarea
+                  value={adminNotes}
+                  onChange={(event) =>
+                    setAdminNotes(event.target.value)
+                  }
+                  rows={4}
+                  maxLength={2000}
+                  placeholder="Add feedback, rights verification notes or reasons for rejection..."
+                  className={`${inputStyle} resize-y`}
+                />
+
+                <p className="mt-1 text-right text-xs text-[#89777c]">
+                  {adminNotes.length}/2000
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-4">
+                <p className="text-sm font-semibold text-amber-300">
+                  Important: Approval does not publish content
+                </p>
+
+                <p className="mt-1 text-xs leading-6 text-[#c9b9bd]">
+                  Review the creator's ownership or written
+                  distribution permission before approving.
+                  An approved submission remains separate from
+                  your public comic library until you manually
+                  complete the publishing process.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap justify-end gap-3 border-t border-[#c69aa1]/15 pt-5">
+                <button
+                  type="button"
+                  onClick={closeSubmission}
+                  className="rounded-xl border border-[#c69aa1]/20 px-4 py-3 text-sm font-semibold text-[#d5c5c8] transition hover:bg-white/5"
+                >
+                  Close
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleReview('rejected')}
+                  disabled={
+                    reviewing || selected.status === 'rejected'
+                  }
+                  className="flex items-center gap-2 rounded-xl border border-red-400/20 bg-red-400/5 px-4 py-3 text-sm font-bold text-red-300 transition hover:bg-red-400/10 disabled:opacity-40"
+                >
+                  <XCircle size={17} />
+                  Reject
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleReview('approved')}
+                  disabled={
+                    reviewing || selected.status === 'approved'
+                  }
+                  className="flex items-center gap-2 rounded-xl bg-emerald-500/15 px-4 py-3 text-sm font-bold text-emerald-300 transition hover:bg-emerald-500/25 disabled:opacity-40"
+                >
+                  {reviewing ? (
+                    <LoaderCircle
+                      size={17}
+                      className="animate-spin"
+                    />
+                  ) : (
+                    <Check size={17} />
+                  )}
+                  Approve
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
+/* =========================================================
+   MAIN ADMIN DASHBOARD
+========================================================= */
 
 export default function Admin() {
   const navigate = useNavigate()
@@ -659,7 +1411,7 @@ export default function Admin() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {statCards.map((card, index) => {
+            {statCards.map((card) => {
               const Icon = card.icon
 
               return (
@@ -865,6 +1617,9 @@ export default function Admin() {
               </form>
             </div>
           </section>
+
+          {/* CREATOR SUBMISSIONS */}
+          <CreatorSubmissions />
 
           {/* COMIC MANAGEMENT */}
           <section className="mt-12">

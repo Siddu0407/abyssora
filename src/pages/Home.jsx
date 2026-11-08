@@ -7,6 +7,7 @@ import {
   ArrowUpRight, Heart, Star, BookOpen, UserRound,
   LogOut, Play, Bell, Library as LibraryIcon,
   ArrowDownUp, SlidersHorizontal, ShieldCheck, Smile,
+  Palette, Users,
 } from 'lucide-react'
 
 import { supabase } from '../lib/supabase'
@@ -594,9 +595,13 @@ export default function Home() {
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-5 px-5 py-3.5 lg:px-10">
           <Brand />
 
-          <nav className="hidden items-center gap-7 text-[13px] font-medium text-[#a9959b] md:flex">
+          <nav className="hidden items-center gap-6 text-[13px] font-medium text-[#a9959b] md:flex">
             <Link to="/" className="flex items-center gap-2 text-[#f1e7e8] transition hover:text-[#dfb9bf]">
               <HomeIcon size={15} /> Home
+            </Link>
+
+            <Link to="/discover" className="flex items-center gap-2 transition hover:text-[#dfb9bf]">
+              <Compass size={15} /> Discover
             </Link>
 
             <button onClick={() => scrollTo('trending')} className="flex items-center gap-2 transition hover:text-[#dfb9bf]">
@@ -608,7 +613,7 @@ export default function Home() {
             </button>
 
             <button onClick={() => scrollTo('explore')} className="flex items-center gap-2 transition hover:text-[#dfb9bf]">
-              <Compass size={15} /> Explore
+              <BookOpen size={15} /> Explore
             </button>
 
             {user && (
@@ -722,6 +727,10 @@ export default function Home() {
               )}
             </div>
 
+            <Link to="/discover" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 border-b border-[#c69aa1]/10 py-3 text-sm text-[#dfb9bf]">
+              <Compass size={17} /> Discover all stories
+            </Link>
+
             <button onClick={() => scrollTo('trending')} className="block w-full border-b border-[#c69aa1]/10 py-3 text-left text-sm text-[#c8b9bd]">
               Trending
             </button>
@@ -731,8 +740,13 @@ export default function Home() {
             </button>
 
             <button onClick={() => scrollTo('explore')} className="block w-full border-b border-[#c69aa1]/10 py-3 text-left text-sm text-[#c8b9bd]">
-              Explore
+              Explore library
             </button>
+
+            <Link to="/creator/submit" onClick={() => setMenuOpen(false)} className="mt-3 flex items-center gap-3 rounded-xl border border-[#c69aa1]/25 bg-[#c69aa1]/10 p-3 text-sm font-semibold text-[#dfb9bf]">
+              <Palette size={17} /> Become a Creator
+              <ArrowUpRight size={15} className="ml-auto" />
+            </Link>
 
             {user ? (
               <div className="mt-4 space-y-3">
@@ -845,12 +859,12 @@ export default function Home() {
                       Read now <ArrowUpRight size={16} />
                     </Link>
 
-                    <button
-                      onClick={() => scrollTo('explore')}
-                      className="rounded-xl border border-[#c69aa1]/30 bg-black/20 px-5 py-3.5 text-sm font-semibold text-[#eadde0] transition hover:border-[#c69aa1]/60"
+                    <Link
+                      to="/discover"
+                      className="inline-flex items-center gap-2 rounded-xl border border-[#c69aa1]/30 bg-black/20 px-5 py-3.5 text-sm font-semibold text-[#eadde0] transition hover:border-[#c69aa1]/60"
                     >
-                      Explore library
-                    </button>
+                      Discover stories <Compass size={15} />
+                    </Link>
                   </div>
 
                   {featuredManga.length > 1 && (
@@ -943,12 +957,21 @@ export default function Home() {
                     : 'Step into extraordinary worlds, follow unforgettable characters and discover the stories that stay with you.'}
                 </p>
 
-                <button
-                  onClick={() => scrollTo('explore')}
-                  className="mt-8 inline-flex items-center gap-3 rounded-xl bg-[#c69aa1] px-6 py-3.5 text-sm font-bold text-[#211619] transition hover:bg-[#dfb9bf]"
-                >
-                  Explore the library <ArrowUpRight size={17} />
-                </button>
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <Link
+                    to="/discover"
+                    className="inline-flex items-center gap-3 rounded-xl bg-[#c69aa1] px-6 py-3.5 text-sm font-bold text-[#211619] transition hover:bg-[#dfb9bf]"
+                  >
+                    Discover stories <ArrowUpRight size={17} />
+                  </Link>
+
+                  <Link
+                    to="/creator/submit"
+                    className="inline-flex items-center gap-2 rounded-xl border border-[#c69aa1]/30 px-5 py-3.5 text-sm font-semibold text-[#dfb9bf] transition hover:bg-[#c69aa1]/10"
+                  >
+                    Become a Creator <Palette size={16} />
+                  </Link>
+                </div>
               </div>
             </div>
           )}
@@ -1351,6 +1374,83 @@ export default function Home() {
           </div>
         </section>
 
+        {/* DISCOVER AND CREATOR PROGRAMME */}
+        <section className="mt-20">
+          <div className="mb-8 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#c69aa1]">
+              More to explore
+            </p>
+
+            <h2 className="mt-3 font-serif text-3xl text-[#f1e7e8] sm:text-4xl">
+              Find stories. Share stories.
+            </h2>
+
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-[#99898e]">
+              Explore new worlds or bring your own original creation to the ABYSSORA community.
+            </p>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            <Link
+              to="/discover"
+              className="group relative overflow-hidden rounded-3xl border border-[#c69aa1]/20 bg-[#191417] p-7 transition duration-300 hover:-translate-y-1 hover:border-[#c69aa1]/50 sm:p-9"
+            >
+              <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#76566e]/15 blur-3xl transition group-hover:bg-[#76566e]/25" />
+
+              <div className="relative">
+                <div className="mb-7 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#c69aa1]/20 bg-[#c69aa1]/10 text-[#dfb9bf]">
+                  <Compass size={27} />
+                </div>
+
+                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#c69aa1]">
+                  For every reader
+                </p>
+
+                <h3 className="mt-3 font-serif text-3xl text-[#f1e7e8]">
+                  Discover your next world.
+                </h3>
+
+                <p className="mt-4 max-w-md text-sm leading-7 text-[#a9959b]">
+                  Search stories, explore genres and find manga, manhwa, manhua and webcomics worth reading.
+                </p>
+
+                <span className="mt-8 inline-flex items-center gap-2 rounded-xl bg-[#c69aa1] px-5 py-3 text-sm font-bold text-[#211619] transition group-hover:bg-[#dfb9bf]">
+                  Explore Discover <ArrowUpRight size={16} />
+                </span>
+              </div>
+            </Link>
+
+            <Link
+              to="/creator/submit"
+              className="group relative overflow-hidden rounded-3xl border border-[#c69aa1]/20 bg-[#191417] p-7 transition duration-300 hover:-translate-y-1 hover:border-[#c69aa1]/50 sm:p-9"
+            >
+              <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#88515e]/15 blur-3xl transition group-hover:bg-[#88515e]/25" />
+
+              <div className="relative">
+                <div className="mb-7 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#c69aa1]/20 bg-[#c69aa1]/10 text-[#dfb9bf]">
+                  <Palette size={27} />
+                </div>
+
+                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#c69aa1]">
+                  For independent creators
+                </p>
+
+                <h3 className="mt-3 font-serif text-3xl text-[#f1e7e8]">
+                  Your story deserves a world.
+                </h3>
+
+                <p className="mt-4 max-w-md text-sm leading-7 text-[#a9959b]">
+                  Created an original comic? Introduce your work to ABYSSORA and submit it for our team's review.
+                </p>
+
+                <span className="mt-8 inline-flex items-center gap-2 rounded-xl border border-[#c69aa1]/40 bg-[#c69aa1]/10 px-5 py-3 text-sm font-bold text-[#dfb9bf] transition group-hover:bg-[#c69aa1]/20">
+                  Become a Creator <ArrowUpRight size={16} />
+                </span>
+              </div>
+            </Link>
+          </div>
+        </section>
+
         {/* CLOSING BANNER */}
         <section className="relative mt-16 overflow-hidden rounded-2xl border border-[#c69aa1]/15 bg-[#191417] px-7 py-10 text-center md:py-14">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(198,154,161,0.09),transparent_65%)]" />
@@ -1372,9 +1472,21 @@ export default function Home() {
               Your next favourite story might be one chapter away.
             </p>
 
-            <button onClick={() => scrollTo('explore')} className="mt-7 inline-flex items-center gap-2 rounded-xl border border-[#c69aa1]/30 px-5 py-3 text-xs font-bold text-[#dfb9bf] transition hover:bg-[#c69aa1]/10">
-              Find your next story <ArrowUpRight size={15} />
-            </button>
+            <div className="mt-7 flex flex-wrap justify-center gap-3">
+              <Link
+                to="/discover"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#c69aa1] px-5 py-3 text-xs font-bold text-[#211619] transition hover:bg-[#dfb9bf]"
+              >
+                Discover stories <Compass size={15} />
+              </Link>
+
+              <Link
+                to="/creator/submit"
+                className="inline-flex items-center gap-2 rounded-xl border border-[#c69aa1]/30 px-5 py-3 text-xs font-bold text-[#dfb9bf] transition hover:bg-[#c69aa1]/10"
+              >
+                Become a Creator <Palette size={15} />
+              </Link>
+            </div>
           </div>
         </section>
       </main>
@@ -1383,6 +1495,16 @@ export default function Home() {
       <footer className="mt-16 border-t border-[#c69aa1]/10 bg-[#0d0a0c]">
         <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-between gap-5 px-5 py-9 sm:flex-row lg:px-10">
           <Brand />
+
+          <div className="flex flex-wrap items-center justify-center gap-5 text-xs text-[#95858a]">
+            <Link to="/discover" className="transition hover:text-[#dfb9bf]">
+              Discover
+            </Link>
+
+            <Link to="/creator/submit" className="transition hover:text-[#dfb9bf]">
+              Become a Creator
+            </Link>
+          </div>
 
           <p className="text-center text-[10px] tracking-wide text-[#76676c]">
             © 2026 ABYSSORA. Built for story lovers.
