@@ -2,6 +2,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 
 import Home from './pages/Home'
+import Discover from './pages/Discover'
 import MangaDetails from './pages/MangaDetails'
 import Reader from './pages/Reader'
 import Login from './pages/Login'
@@ -19,6 +20,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/discover" element={<Discover />} />
         <Route path="/manga/:id" element={<MangaDetails />} />
         <Route path="/manga/:id/chapter/:chapterNumber" element={<Reader />} />
         <Route path="/genre/:genreName" element={<Genre />} />
