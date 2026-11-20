@@ -14,6 +14,8 @@ import Genre from './pages/Genre'
 import Admin from './pages/Admin'
 import Notifications from './pages/Notifications'
 import CreatorSubmission from './pages/CreatorSubmission'
+import ExternalComicReader from './pages/ExternalComicReader'
+import ExternalComicManagement from './pages/ExternalComicManagement'
 
 function App() {
   return (
@@ -21,17 +23,35 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/discover" element={<Discover />} />
+
         <Route path="/manga/:id" element={<MangaDetails />} />
-        <Route path="/manga/:id/chapter/:chapterNumber" element={<Reader />} />
+        <Route
+          path="/manga/:id/chapter/:chapterNumber"
+          element={<Reader />}
+        />
+
         <Route path="/genre/:genreName" element={<Genre />} />
+
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/update-password" element={<UpdatePassword />} />
+
         <Route path="/profile" element={<Profile />} />
         <Route path="/library" element={<Library />} />
         <Route path="/notifications" element={<Notifications />} />
+
         <Route path="/admin" element={<Admin />} />
+        <Route
+          path="/admin/external-comics"
+          element={<ExternalComicManagement />}
+        />
+
+        <Route
+          path="/external-comic/:id"
+          element={<ExternalComicReader />}
+        />
+
         <Route path="/creator/submit" element={<CreatorSubmission />} />
       </Routes>
     </BrowserRouter>

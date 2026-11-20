@@ -1305,6 +1305,13 @@ export default function Admin() {
           <LayoutDashboard size={19} />
           <span className="text-sm font-semibold">Dashboard</span>
         </div>
+        <Link
+             to="/admin/external-comics"
+            className="mt-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-[#ad9da1] transition hover:bg-white/5 hover:text-[#d5a2aa]"
+      >
+       <ExternalLink size={19} />
+       External Comics
+        </Link>
 
         <div className="mt-auto space-y-3">
           <Link
