@@ -2,12 +2,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Search, Bookmark, Menu, X, ChevronRight, ChevronLeft,
+  Search, Bookmark, Menu, X, ChevronRight,
   Flame, Clock3, Compass, Home as HomeIcon, Sparkles,
   ArrowUpRight, Heart, Star, BookOpen, UserRound,
   LogOut, Play, Bell, Library as LibraryIcon,
   ArrowDownUp, SlidersHorizontal, ShieldCheck, Smile,
-  Palette, Users,
+  Palette,
 } from 'lucide-react'
 
 import { supabase } from '../lib/supabase'
@@ -474,8 +474,6 @@ export default function Home() {
       .slice(0, 5)
   }, [manga])
 
-  const activeFeatured = featuredManga[activeFeaturedIndex] || featuredManga[0]
-
   // LOGOUT
   const handleLogout = async () => {
     setLoggingOut(true)
@@ -795,183 +793,187 @@ export default function Home() {
 
       <main className="mx-auto max-w-[1440px] px-5 pb-24 lg:px-10">
 
-        {/* LATEST MANHWA CAROUSEL */}
-        <section
-          id="latest"
-          className="relative mt-7 overflow-hidden rounded-[26px] border border-[#c69aa1]/20 bg-[#191417]"
-        >
-          {activeFeatured ? (
-            <>
-              <div className="absolute inset-0">
-                {activeFeatured.coverImage ? (
-                  <img
-                    key={activeFeatured.id}
-                    src={activeFeatured.coverImage}
-                    alt=""
-                    className="h-full w-full object-cover opacity-25 blur-[2px]"
-                  />
-                ) : (
-                  <div className={`h-full w-full bg-gradient-to-br ${activeFeatured.colors}`} />
-                )}
-
-                <div className="absolute inset-0 bg-gradient-to-r from-[#110e10] via-[#110e10]/95 to-[#110e10]/45" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#110e10]/80 via-transparent to-[#110e10]/20" />
+        {/* LATEST MANHWA — EXPANDING GALLERY */}
+        <section id="latest" className="mt-7">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.25em] text-[#c69aa1]">
+                <Sparkles size={13} />
+                Discover something new
               </div>
 
-              <div className="relative grid min-h-[470px] items-center gap-8 px-6 py-10 sm:px-10 md:grid-cols-[1fr_250px] md:px-14 lg:min-h-[510px] lg:grid-cols-[1fr_300px] lg:px-20">
-                <div className="relative z-10 max-w-2xl">
-                  <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#c69aa1]/30 bg-[#c69aa1]/10 px-4 py-2 text-[9px] font-bold uppercase tracking-[0.24em] text-[#dfb9bf]">
-                    <Sparkles size={13} />
-                    Fresh from the library
-                  </div>
+              <h1 className="font-serif text-3xl font-medium tracking-tight text-[#f1e7e8] sm:text-4xl">
+                Latest <span className="italic text-[#c69aa1]">releases.</span>
+              </h1>
 
-                  <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.25em] text-[#c69aa1]">
-                    Latest manhwa release
-                  </p>
+              <p className="mt-2 text-xs text-[#99898e] sm:text-sm">
+                Fresh stories, waiting to become your next obsession.
+              </p>
+            </div>
 
-                  <h1 className="line-clamp-2 text-4xl font-semibold leading-tight tracking-tight text-[#f1e7e8] sm:text-5xl lg:text-6xl">
-                    {activeFeatured.title}
-                  </h1>
+            <Link
+              to="/discover"
+              className="mb-1 inline-flex items-center gap-2 text-xs font-semibold text-[#c69aa1] transition hover:text-[#dfb9bf]"
+            >
+              Explore all <ArrowUpRight size={15} />
+            </Link>
+          </div>
 
-                  <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-[#c4b2b7]">
-                    <span className="rounded-full border border-[#c69aa1]/25 bg-black/20 px-3 py-1.5">
-                      {getComicGenres(activeFeatured).join(' · ') || 'Manhwa'}
-                    </span>
+          {featuredManga.length > 0 ? (
+            <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4 md:min-h-[490px] md:overflow-visible md:pb-0">
+              {featuredManga.map((item, index) => {
+                const isActive = index === activeFeaturedIndex
 
-                    <span className="flex items-center gap-1 text-[#e6c99a]">
-                      <Star size={13} fill="currentColor" />
-                      {activeFeatured.rating || 'New'}
-                    </span>
-
-                    <span>{activeFeatured.chapter}</span>
-                  </div>
-
-                  <p className="mt-5 line-clamp-3 max-w-xl text-sm leading-7 text-[#c4b2b7]">
-                    {activeFeatured.description ||
-                      `Discover ${activeFeatured.title} on ABYSSORA and step into a new world of stories, characters and unforgettable adventures.`}
-                  </p>
-
-                  <div className="mt-8 flex flex-wrap items-center gap-3">
-                    <Link
-                      to={`/manga/${activeFeatured.id}`}
-                      className="inline-flex items-center gap-2 rounded-xl bg-[#c69aa1] px-6 py-3.5 text-sm font-bold text-[#211619] transition hover:-translate-y-0.5 hover:bg-[#dfb9bf]"
-                    >
-                      Read now <ArrowUpRight size={16} />
-                    </Link>
-
-                    <Link
-                      to="/discover"
-                      className="inline-flex items-center gap-2 rounded-xl border border-[#c69aa1]/30 bg-black/20 px-5 py-3.5 text-sm font-semibold text-[#eadde0] transition hover:border-[#c69aa1]/60"
-                    >
-                      Discover stories <Compass size={15} />
-                    </Link>
-                  </div>
-
-                  {featuredManga.length > 1 && (
-                    <div className="mt-9 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setActiveFeaturedIndex((current) =>
-                          (current - 1 + featuredManga.length) % featuredManga.length
-                        )}
-                        aria-label="Previous featured manga"
-                        className="flex h-9 w-9 items-center justify-center rounded-full border border-[#c69aa1]/25 bg-black/25 text-[#eadde0] transition hover:bg-[#c69aa1]/20"
-                      >
-                        <ChevronLeft size={17} />
-                      </button>
-
-                      {featuredManga.map((item, index) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => setActiveFeaturedIndex(index)}
-                          aria-label={`Show ${item.title}`}
-                          aria-pressed={index === activeFeaturedIndex}
-                          className={`h-1.5 rounded-full transition-all ${
-                            index === activeFeaturedIndex
-                              ? 'w-8 bg-[#dfb9bf]'
-                              : 'w-3 bg-[#c69aa1]/35 hover:bg-[#c69aa1]/70'
+                return (
+                  <article
+                    key={item.id}
+                    tabIndex={0}
+                    onMouseEnter={() => setActiveFeaturedIndex(index)}
+                    onFocus={() => setActiveFeaturedIndex(index)}
+                    onClick={() => setActiveFeaturedIndex(index)}
+                    className={`group relative h-[410px] w-[78vw] shrink-0 snap-center cursor-pointer overflow-hidden rounded-2xl border bg-[#191417] transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] md:h-[490px] md:w-auto md:shrink ${
+                      isActive
+                        ? 'border-[#c69aa1]/55 shadow-xl shadow-black/30 md:flex-[3.5]'
+                        : 'border-[#c69aa1]/15 hover:border-[#c69aa1]/35 md:flex-[0.85]'
+                    }`}
+                  >
+                    {/* COVER ART */}
+                    <div className="absolute inset-0">
+                      {item.coverImage ? (
+                        <img
+                          src={item.coverImage}
+                          alt={`${item.title} cover artwork`}
+                          loading="lazy"
+                          className={`h-full w-full object-cover transition-all duration-1000 ${
+                            isActive
+                              ? 'scale-100 opacity-90'
+                              : 'scale-110 opacity-55 group-hover:scale-100 group-hover:opacity-75'
                           }`}
                         />
-                      ))}
-
-                      <button
-                        type="button"
-                        onClick={() => setActiveFeaturedIndex((current) =>
-                          (current + 1) % featuredManga.length
-                        )}
-                        aria-label="Next featured manga"
-                        className="flex h-9 w-9 items-center justify-center rounded-full border border-[#c69aa1]/25 bg-black/25 text-[#eadde0] transition hover:bg-[#c69aa1]/20"
-                      >
-                        <ChevronRight size={17} />
-                      </button>
+                      ) : (
+                        <div className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${item.colors}`}>
+                          <span className="font-serif text-8xl text-[#f1e7e8]/50">
+                            {item.symbol}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                <Link
-                  to={`/manga/${activeFeatured.id}`}
-                  className="group relative mx-auto hidden w-full max-w-[250px] md:block lg:max-w-[290px]"
-                  aria-label={`Read ${activeFeatured.title}`}
-                >
-                  <div className="absolute -inset-3 rounded-2xl border border-[#c69aa1]/20 opacity-70 transition group-hover:rotate-2 group-hover:border-[#c69aa1]/50" />
+                    {/* DARK CINEMATIC OVERLAY */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0c090b] via-[#110e10]/35 to-[#110e10]/10" />
 
-                  <div className="relative aspect-[3/4] overflow-hidden rounded-xl border border-[#c69aa1]/30 bg-[#211a1e] shadow-2xl shadow-black/50">
-                    {activeFeatured.coverImage ? (
-                      <img
-                        key={activeFeatured.id}
-                        src={activeFeatured.coverImage}
-                        alt={`${activeFeatured.title} cover`}
-                        className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className={`flex h-full items-center justify-center bg-gradient-to-br ${activeFeatured.colors}`}>
-                        <span className="text-7xl text-white/70">{activeFeatured.symbol}</span>
+                    <div className={`absolute inset-0 bg-gradient-to-r from-[#110e10]/75 via-transparent to-transparent transition-opacity duration-700 ${
+                      isActive ? 'opacity-100' : 'opacity-50'
+                    }`} />
+
+                    {/* TOP LABELS */}
+                    <div className="absolute left-4 right-4 top-4 flex items-center justify-between gap-2">
+                      <span className="rounded-full border border-[#dfb9bf]/30 bg-[#110e10]/65 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-[#dfb9bf] backdrop-blur-md">
+                        {index === 0 ? 'Newest release' : `New arrival · 0${index + 1}`}
+                      </span>
+
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/35 text-xs font-semibold text-white/80 backdrop-blur-md">
+                        0{index + 1}
+                      </span>
+                    </div>
+
+                    {/* COLLAPSED TITLE */}
+                    {!isActive && (
+                      <div className="absolute inset-x-0 bottom-0 p-5 transition-opacity duration-300 md:opacity-100">
+                        <h3 className="line-clamp-2 text-lg font-semibold text-white md:text-xl">
+                          {item.title}
+                        </h3>
+                        <p className="mt-1 text-[10px] text-white/65">
+                          {getComicGenres(item).join(' · ') || 'Manhwa'}
+                        </p>
                       </div>
                     )}
-                  </div>
 
-                  <p className="mt-4 text-center text-xs font-semibold text-[#dfb9bf]">
-                    Discover the latest story
-                  </p>
-                </Link>
-              </div>
-            </>
+                    {/* EXPANDED CONTENT */}
+                    <div className={`absolute inset-x-0 bottom-0 p-5 transition-all duration-700 sm:p-7 ${
+                      isActive
+                        ? 'translate-y-0 opacity-100'
+                        : 'translate-y-5 opacity-0 pointer-events-none'
+                    }`}>
+                      <div className="max-w-xl">
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                          <span className="rounded-full border border-[#c69aa1]/35 bg-[#c69aa1]/15 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.2em] text-[#dfb9bf] backdrop-blur-md">
+                            Latest manhwa
+                          </span>
+
+                          <span className="flex items-center gap-1 text-xs font-semibold text-[#e6c99a]">
+                            <Star size={12} fill="currentColor" />
+                            {item.rating || 'New'}
+                          </span>
+                        </div>
+
+                        <h2 className="line-clamp-2 font-serif text-3xl font-medium leading-tight text-white sm:text-4xl md:text-5xl">
+                          {item.title}
+                        </h2>
+
+                        <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.17em] text-[#dfb9bf]">
+                          {getComicGenres(item).join(' · ') || 'Manhwa'}
+                          <span className="mx-2 text-white/40">/</span>
+                          {item.chapter}
+                        </p>
+
+                        <p className="mt-3 line-clamp-2 max-w-lg text-xs leading-6 text-white/75 sm:text-sm">
+                          {item.description ||
+                            `Enter the world of ${item.title} and discover a new story on ABYSSORA.`}
+                        </p>
+
+                        <div className="mt-5 flex flex-wrap items-center gap-3">
+                          <Link
+                            to={`/manga/${item.id}`}
+                            onClick={(event) => event.stopPropagation()}
+                            className="inline-flex items-center gap-2 rounded-xl bg-[#c69aa1] px-5 py-3 text-xs font-bold text-[#211619] shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:bg-[#dfb9bf]"
+                          >
+                            Read story <ArrowUpRight size={15} />
+                          </Link>
+
+                          <span className="text-[10px] font-medium text-white/65">
+                            Available on ABYSSORA
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ACTIVE BORDER GLOW */}
+                    <div className={`pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset transition duration-700 ${
+                      isActive ? 'ring-[#dfb9bf]/25' : 'ring-white/[0.04]'
+                    }`} />
+                  </article>
+                )
+              })}
+            </div>
           ) : (
-            <div className="relative flex min-h-[420px] items-center px-7 py-14 md:px-14 lg:px-20">
-              <div className="max-w-2xl">
-                <div className="mb-7 inline-flex items-center gap-3 rounded-full border border-[#c69aa1]/25 bg-[#c69aa1]/[0.07] px-4 py-2">
-                  <Emblem size={18} />
-                  <span className="text-[9px] font-bold tracking-[0.24em] text-[#dfb9bf]">
+            <div className="relative flex min-h-[380px] items-center overflow-hidden rounded-2xl border border-[#c69aa1]/20 bg-[#191417] px-7 py-12 sm:px-12">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_30%,rgba(198,154,161,0.12),transparent_55%)]" />
+
+              <div className="relative max-w-xl">
+                <div className="mb-6 flex items-center gap-3">
+                  <Emblem size={28} />
+                  <span className="text-[9px] font-bold tracking-[0.25em] text-[#dfb9bf]">
                     WORLDS BEYOND STORIES
                   </span>
                 </div>
 
-                <h1 className="text-4xl font-semibold leading-[1.12] tracking-tight text-[#f1e7e8] sm:text-6xl">
-                  Every story has <span className="font-serif italic text-[#c69aa1]">a universe.</span>
-                </h1>
+                <h2 className="font-serif text-4xl leading-tight text-[#f1e7e8] sm:text-5xl">
+                  Every story has <span className="italic text-[#c69aa1]">a universe.</span>
+                </h2>
 
-                <p className="mt-6 max-w-lg text-sm leading-7 text-[#ad9da1]">
+                <p className="mt-5 max-w-md text-sm leading-7 text-[#ad9da1]">
                   {loadingManga
                     ? 'Discovering the latest stories for you...'
-                    : 'Step into extraordinary worlds, follow unforgettable characters and discover the stories that stay with you.'}
+                    : 'New worlds are waiting to be discovered. Check back soon for the latest releases.'}
                 </p>
 
-                <div className="mt-8 flex flex-wrap gap-3">
-                  <Link
-                    to="/discover"
-                    className="inline-flex items-center gap-3 rounded-xl bg-[#c69aa1] px-6 py-3.5 text-sm font-bold text-[#211619] transition hover:bg-[#dfb9bf]"
-                  >
-                    Discover stories <ArrowUpRight size={17} />
-                  </Link>
-
-                  <Link
-                    to="/creator/submit"
-                    className="inline-flex items-center gap-2 rounded-xl border border-[#c69aa1]/30 px-5 py-3.5 text-sm font-semibold text-[#dfb9bf] transition hover:bg-[#c69aa1]/10"
-                  >
-                    Become a Creator <Palette size={16} />
-                  </Link>
-                </div>
+                <Link
+                  to="/discover"
+                  className="mt-7 inline-flex items-center gap-2 rounded-xl bg-[#c69aa1] px-5 py-3 text-sm font-bold text-[#211619] transition hover:bg-[#dfb9bf]"
+                >
+                  Discover stories <ArrowUpRight size={16} />
+                </Link>
               </div>
             </div>
           )}
