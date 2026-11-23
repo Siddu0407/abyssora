@@ -1,5 +1,11 @@
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { useLayoutEffect } from 'react'
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+} from 'react-router-dom'
 
 import Home from './pages/Home'
 import Discover from './pages/Discover'
@@ -17,15 +23,50 @@ import Notifications from './pages/Notifications'
 import CreatorSubmission from './pages/CreatorSubmission'
 import ExternalComicReader from './pages/ExternalComicReader'
 import ExternalComicManagement from './pages/ExternalComicManagement'
-
 import Footer from './components/Footer'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import Copyright from './pages/Copyright'
 
+function ScrollToTop() {
+  const { pathname, search, key } = useLocation()
+
+  useLayoutEffect(() => {
+    let frameId
+
+    const resetScroll = () => {
+      window.scrollTo(0, 0)
+      document.documentElement.scrollTop = 0
+      document.body.scrollTop = 0
+    }
+
+    // Reset immediately after the new route renders.
+    const html = document.documentElement
+    const previousBehavior = html.style.scrollBehavior
+    html.style.scrollBehavior = 'auto'
+
+    resetScroll()
+
+    // Reset once more after the browser completes the next layout frame.
+    frameId = window.requestAnimationFrame(() => {
+      resetScroll()
+      html.style.scrollBehavior = previousBehavior
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      html.style.scrollBehavior = previousBehavior
+    }
+  }, [pathname, search, key])
+
+  return null
+}
+
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
+
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/discover" element={<Discover />} />
@@ -46,8 +87,8 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/library" element={<Library />} />
         <Route path="/notifications" element={<Notifications />} />
-
         <Route path="/admin" element={<Admin />} />
+
         <Route
           path="/admin/external-comics"
           element={<ExternalComicManagement />}
@@ -60,7 +101,6 @@ function App() {
 
         <Route path="/creator/submit" element={<CreatorSubmission />} />
 
-        {/* Legal pages */}
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/copyright" element={<Copyright />} />

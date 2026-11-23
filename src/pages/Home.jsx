@@ -1491,26 +1491,6 @@ export default function Home() {
         </section>
       </main>
 
-      {/* FOOTER */}
-      <footer className="mt-16 border-t border-[#c69aa1]/10 bg-[#0d0a0c]">
-        <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-between gap-5 px-5 py-9 sm:flex-row lg:px-10">
-          <Brand />
-
-          <div className="flex flex-wrap items-center justify-center gap-5 text-xs text-[#95858a]">
-            <Link to="/discover" className="transition hover:text-[#dfb9bf]">
-              Discover
-            </Link>
-
-            <Link to="/creator/submit" className="transition hover:text-[#dfb9bf]">
-              Become a Creator
-            </Link>
-          </div>
-
-          <p className="text-center text-[10px] tracking-wide text-[#76676c]">
-            © 2026 ABYSSORA. Built for story lovers.
-          </p>
-        </div>
-      </footer>
     </div>
   )
 }
