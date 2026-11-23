@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 
 import Home from './pages/Home'
@@ -16,6 +17,11 @@ import Notifications from './pages/Notifications'
 import CreatorSubmission from './pages/CreatorSubmission'
 import ExternalComicReader from './pages/ExternalComicReader'
 import ExternalComicManagement from './pages/ExternalComicManagement'
+
+import Footer from './components/Footer'
+import Terms from './pages/Terms'
+import Privacy from './pages/Privacy'
+import Copyright from './pages/Copyright'
 
 function App() {
   return (
@@ -53,7 +59,14 @@ function App() {
         />
 
         <Route path="/creator/submit" element={<CreatorSubmission />} />
+
+        {/* Legal pages */}
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/copyright" element={<Copyright />} />
       </Routes>
+
+      <Footer />
     </BrowserRouter>
   )
 }
