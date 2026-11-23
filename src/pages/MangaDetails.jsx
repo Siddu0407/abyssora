@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -17,6 +17,9 @@ import {
   ExternalLink,
   Palette,
   FileText,
+  Search,
+  X,
+  ChevronDown,
 } from 'lucide-react'
 
 import { supabase } from '../lib/supabase'
@@ -63,7 +66,6 @@ function setCanonical(url) {
   element.setAttribute('href', url)
 }
 
-// Extract creator and licence details from the existing description.
 function getCredits(description, author) {
   const lines = String(description || '')
     .split('\n')
@@ -158,6 +160,12 @@ export default function MangaDetails() {
   const [bookmarkSaving, setBookmarkSaving] = useState(false)
   const [bookmarkMessage, setBookmarkMessage] = useState('')
 
+  // Chapter search and display controls
+  const [chapterSearch, setChapterSearch] = useState('')
+  const [showAllChapters, setShowAllChapters] = useState(false)
+  const [readingOrder, setReadingOrder] = useState('latest')
+
+  // LOAD MANGA AND CHAPTERS
   useEffect(() => {
     let cancelled = false
 
@@ -165,6 +173,9 @@ export default function MangaDetails() {
       setLoading(true)
       setError('')
       setImageFailed(false)
+      setChapterSearch('')
+      setShowAllChapters(false)
+      setReadingOrder('latest')
 
       try {
         const { data: comic, error: comicError } = await supabase
@@ -233,6 +244,7 @@ export default function MangaDetails() {
     }
   }, [id])
 
+  // SEO METADATA
   useEffect(() => {
     if (!story) return
 
@@ -292,6 +304,7 @@ export default function MangaDetails() {
     }
   }, [story])
 
+  // RESET SEO METADATA WHEN LEAVING
   useEffect(() => {
     return () => {
       document.title = 'ABYSSORA | Read Manga Online'
@@ -332,6 +345,7 @@ export default function MangaDetails() {
     }
   }, [])
 
+  // BOOKMARK STATUS
   useEffect(() => {
     let cancelled = false
 
@@ -403,6 +417,7 @@ export default function MangaDetails() {
     }
   }, [id])
 
+  // ADD OR REMOVE BOOKMARK
   async function toggleBookmark() {
     if (bookmarkSaving) return
 
@@ -457,6 +472,46 @@ export default function MangaDetails() {
     }
   }
 
+  // SORT CHAPTERS BY READING ORDER
+  const sortedChapters = useMemo(() => {
+    return [...chapters].sort((a, b) => {
+      const first = Number(a.chapter_number) || 0
+      const second = Number(b.chapter_number) || 0
+
+      return readingOrder === 'first'
+        ? first - second
+        : second - first
+    })
+  }, [chapters, readingOrder])
+
+  // SEARCH ALL PUBLISHED CHAPTERS
+  const filteredChapters = useMemo(() => {
+    const query = chapterSearch.trim().toLowerCase()
+
+    if (!query) return sortedChapters
+
+    return sortedChapters.filter((chapter) => {
+      const chapterNumber = String(chapter.chapter_number ?? '')
+      const chapterTitle = String(chapter.title || '').toLowerCase()
+
+      return (
+        chapterNumber.includes(query) ||
+        `chapter ${chapterNumber}`.toLowerCase().includes(query) ||
+        chapterTitle.includes(query)
+      )
+    })
+  }, [sortedChapters, chapterSearch])
+
+  // SHOW FIVE CHAPTERS BY DEFAULT
+  const visibleChapters = useMemo(() => {
+    if (chapterSearch.trim() || showAllChapters) {
+      return filteredChapters
+    }
+
+    return filteredChapters.slice(0, 5)
+  }, [filteredChapters, chapterSearch, showAllChapters])
+
+  // LOADING SCREEN
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#110e10] text-[#f1e7e8]">
@@ -473,6 +528,7 @@ export default function MangaDetails() {
     )
   }
 
+  // ERROR SCREEN
   if (error || !story) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-[#110e10] px-5 text-[#f1e7e8]">
@@ -496,7 +552,13 @@ export default function MangaDetails() {
     )
   }
 
-  const latestChapter = chapters[0]?.chapter_number || 0
+  const latestChapter = chapters.reduce((latest, chapter) => {
+    return Math.max(
+      latest,
+      Number(chapter.chapter_number) || 0
+    )
+  }, 0)
+
   const credits = getCredits(story.description, story.author)
 
   return (
@@ -868,42 +930,151 @@ export default function MangaDetails() {
           )}
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-[#c69aa1]/20 bg-[#191417]">
-          {chapters.length > 0 ? (
-            chapters.slice(0, 5).map((chapter, index) => (
-              <Link
-                key={chapter.id}
-                to={`/manga/${story.id}/chapter/${chapter.chapter_number}`}
-                className={`group flex items-center justify-between gap-3 p-5 transition hover:bg-[#c69aa1]/[0.06] ${
-                  index !== Math.min(chapters.length, 5) - 1
-                    ? 'border-b border-[#c69aa1]/10'
-                    : ''
+        {/* CHAPTER SEARCH */}
+        {chapters.length > 0 && (
+          <div className="mb-5">
+            <div className="relative">
+              <Search
+                size={18}
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#89777c]"
+              />
+
+              <input
+                type="search"
+                value={chapterSearch}
+                onChange={(event) => setChapterSearch(event.target.value)}
+                placeholder="Search chapters by number or title..."
+                aria-label="Search chapters by number or title"
+                className="w-full rounded-xl border border-[#c69aa1]/20 bg-[#191417] py-3.5 pl-12 pr-12 text-sm text-[#f1e7e8] outline-none transition placeholder:text-[#76676c] focus:border-[#c69aa1]/60 focus:ring-2 focus:ring-[#c69aa1]/10"
+              />
+
+              {chapterSearch && (
+                <button
+                  type="button"
+                  onClick={() => setChapterSearch('')}
+                  aria-label="Clear chapter search"
+                  className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-[#99898e] transition hover:bg-[#c69aa1]/10 hover:text-[#f1e7e8]"
+                >
+                  <X size={17} />
+                </button>
+              )}
+            </div>
+
+            {chapterSearch.trim() && (
+              <p className="mt-3 text-xs text-[#99898e]">
+                Found {filteredChapters.length}{' '}
+                {filteredChapters.length === 1 ? 'chapter' : 'chapters'}
+                {' '}matching "{chapterSearch.trim()}"
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* READING ORDER TOGGLES */}
+        {chapters.length > 0 && (
+          <div className="mb-5">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#89777c]">
+              Choose reading order
+            </p>
+
+            <div className="inline-flex flex-wrap gap-2 rounded-xl border border-[#c69aa1]/15 bg-[#191417] p-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setReadingOrder('latest')
+                  setShowAllChapters(false)
+                }}
+                aria-pressed={readingOrder === 'latest'}
+                className={`rounded-lg px-4 py-2.5 text-xs font-semibold transition ${
+                  readingOrder === 'latest'
+                    ? 'bg-[#c69aa1] text-[#211619] shadow-lg'
+                    : 'text-[#ad9da1] hover:bg-[#c69aa1]/10 hover:text-[#dfb9bf]'
                 }`}
               >
-                <div>
-                  <p className="text-sm font-semibold text-[#e9dcde] transition group-hover:text-[#dfb9bf]">
-                    Chapter {chapter.chapter_number}
-                  </p>
+                Read Latest First
+              </button>
 
-                  <p className="mt-1 text-xs text-[#89777c]">
-                    {chapter.title || 'Read chapter'}
-                  </p>
-                </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setReadingOrder('first')
+                  setShowAllChapters(false)
+                }}
+                aria-pressed={readingOrder === 'first'}
+                className={`rounded-lg px-4 py-2.5 text-xs font-semibold transition ${
+                  readingOrder === 'first'
+                    ? 'bg-[#c69aa1] text-[#211619] shadow-lg'
+                    : 'text-[#ad9da1] hover:bg-[#c69aa1]/10 hover:text-[#dfb9bf]'
+                }`}
+              >
+                Read from First
+              </button>
+            </div>
+          </div>
+        )}
 
-                <div className="flex items-center gap-3">
-                  {index === 0 && (
-                    <span className="rounded-full bg-[#c69aa1]/10 px-2 py-1 text-[10px] font-bold text-[#dfb9bf]">
-                      LATEST
-                    </span>
-                  )}
+        {/* CHAPTER LIST */}
+        <div className="overflow-hidden rounded-2xl border border-[#c69aa1]/20 bg-[#191417]">
+          {chapters.length > 0 ? (
+            filteredChapters.length > 0 ? (
+              visibleChapters.map((chapter, index) => (
+                <Link
+                  key={chapter.id}
+                  to={`/manga/${story.id}/chapter/${chapter.chapter_number}`}
+                  className={`group flex items-center justify-between gap-3 p-5 transition hover:bg-[#c69aa1]/[0.06] ${
+                    index !== visibleChapters.length - 1
+                      ? 'border-b border-[#c69aa1]/10'
+                      : ''
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#e9dcde] transition group-hover:text-[#dfb9bf]">
+                      Chapter {chapter.chapter_number}
+                    </p>
 
-                  <ChevronRight
-                    size={18}
-                    className="text-[#76676c] transition group-hover:translate-x-1 group-hover:text-[#c69aa1]"
-                  />
-                </div>
-              </Link>
-            ))
+                    <p className="mt-1 truncate text-xs text-[#89777c]">
+                      {chapter.title || 'Read chapter'}
+                    </p>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-3">
+                    {Number(chapter.chapter_number) === latestChapter && (
+                      <span className="rounded-full bg-[#c69aa1]/10 px-2 py-1 text-[10px] font-bold text-[#dfb9bf]">
+                        LATEST
+                      </span>
+                    )}
+
+                    <ChevronRight
+                      size={18}
+                      className="text-[#76676c] transition group-hover:translate-x-1 group-hover:text-[#c69aa1]"
+                    />
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <div className="px-5 py-12 text-center">
+                <Search
+                  size={30}
+                  className="mx-auto text-[#76676c]"
+                />
+
+                <p className="mt-4 font-semibold text-[#e4d5d8]">
+                  No chapters found
+                </p>
+
+                <p className="mt-2 text-sm text-[#89777c]">
+                  Try another chapter number or title.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setChapterSearch('')}
+                  className="mt-5 rounded-lg border border-[#c69aa1]/25 px-4 py-2 text-xs font-semibold text-[#dfb9bf] transition hover:bg-[#c69aa1]/10"
+                >
+                  Clear search
+                </button>
+              </div>
+            )
           ) : (
             <div className="px-5 py-12 text-center">
               <BookOpen
@@ -922,10 +1093,50 @@ export default function MangaDetails() {
           )}
         </div>
 
-        {chapters.length > 5 && (
-          <p className="mt-5 text-center text-xs text-[#76676c]">
-            Showing the latest 5 published chapters.
-          </p>
+        {/* VIEW ALL / SHOW LESS */}
+        {chapters.length > 5 && !chapterSearch.trim() && (
+          <div className="mt-5 flex flex-col items-center gap-3">
+            <p className="text-xs text-[#76676c]">
+              {showAllChapters
+                ? `Showing all ${chapters.length} published chapters.`
+                : `Showing the first 5 of ${chapters.length} published chapters in ${
+                    readingOrder === 'latest'
+                      ? 'latest-first'
+                      : 'oldest-first'
+                  } order.`}
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setShowAllChapters((previous) => !previous)}
+              className="inline-flex items-center gap-2 rounded-xl border border-[#c69aa1]/25 bg-[#211a1e] px-6 py-3 text-sm font-semibold text-[#dfb9bf] transition hover:border-[#c69aa1]/60 hover:bg-[#c69aa1]/10"
+            >
+              {showAllChapters ? (
+                <>
+                  Show Less
+                  <ChevronDown size={17} className="rotate-180" />
+                </>
+              ) : (
+                <>
+                  View All Chapters
+                  <ChevronDown size={17} />
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* CLEAR SEARCH */}
+        {chapterSearch.trim() && filteredChapters.length > 0 && (
+          <div className="mt-5 text-center">
+            <button
+              type="button"
+              onClick={() => setChapterSearch('')}
+              className="text-xs font-semibold text-[#c69aa1] transition hover:text-[#dfb9bf]"
+            >
+              Clear search and return to chapter list
+            </button>
+          </div>
         )}
       </section>
 
