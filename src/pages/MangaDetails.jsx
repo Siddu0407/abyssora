@@ -151,6 +151,7 @@ export default function MangaDetails() {
 
   const [story, setStory] = useState(null)
   const [chapters, setChapters] = useState([])
+  const [relatedStories, setRelatedStories] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [imageFailed, setImageFailed] = useState(false)
@@ -173,6 +174,7 @@ export default function MangaDetails() {
       setLoading(true)
       setError('')
       setImageFailed(false)
+      setRelatedStories([])
       setChapterSearch('')
       setShowAllChapters(false)
       setReadingOrder('latest')
@@ -226,6 +228,51 @@ export default function MangaDetails() {
         })
 
         setChapters(chapterData || [])
+
+        // Recommendations are optional: a failed recommendation query
+        // must never prevent the current story from loading.
+        const { data: catalogue } = await supabase
+          .from('comics')
+          .select('id, title, cover_image, genre, genres, rating, status')
+          .neq('id', id)
+          .order('created_at', { ascending: false })
+          .limit(16)
+
+        if (!cancelled) {
+          const currentGenres = (Array.isArray(comic.genres)
+            ? comic.genres
+            : comic.genre
+              ? [comic.genre]
+              : []
+          ).map((genre) => String(genre).toLowerCase())
+
+          const recommendations = (catalogue || [])
+            .filter((item) => String(item.status || '').toLowerCase() !== 'draft')
+            .map((item) => {
+              const itemGenres = (Array.isArray(item.genres)
+                ? item.genres
+                : item.genre
+                  ? [item.genre]
+                  : []
+              ).map((genre) => String(genre).toLowerCase())
+
+              return {
+                ...item,
+                genreList: Array.isArray(item.genres)
+                  ? item.genres
+                  : item.genre
+                    ? [item.genre]
+                    : [],
+                matchCount: itemGenres.filter((genre) =>
+                  currentGenres.includes(genre)
+                ).length,
+              }
+            })
+            .sort((a, b) => b.matchCount - a.matchCount)
+            .slice(0, 4)
+
+          setRelatedStories(recommendations)
+        }
       } catch (err) {
         console.error('Could not load manga:', err)
 
@@ -552,12 +599,15 @@ export default function MangaDetails() {
     )
   }
 
-  const latestChapter = chapters.reduce((latest, chapter) => {
-    return Math.max(
-      latest,
-      Number(chapter.chapter_number) || 0
-    )
-  }, 0)
+  const chapterNumbers = chapters.map((chapter) =>
+    Number(chapter.chapter_number)
+  ).filter(Number.isFinite)
+  const latestChapter = chapterNumbers.length
+    ? Math.max(...chapterNumbers)
+    : null
+  const firstChapter = chapterNumbers.length
+    ? Math.min(...chapterNumbers)
+    : null
 
   const credits = getCredits(story.description, story.author)
 
@@ -600,9 +650,9 @@ export default function MangaDetails() {
 
         <div className="absolute -right-8 top-10 h-72 w-72 rounded-full border border-[#c69aa1]/10" />
 
-        <div className="relative mx-auto grid max-w-7xl gap-10 px-5 py-12 md:grid-cols-[280px_1fr] md:py-16">
+        <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-5 py-14 md:grid-cols-[minmax(260px,340px)_1fr] md:gap-16 md:py-20">
           {/* COVER */}
-          <div className="group relative mx-auto aspect-[3/4] w-full max-w-[280px] overflow-hidden rounded-2xl border border-[#c69aa1]/20 bg-[#211a1e] shadow-2xl shadow-black/40">
+          <div className="group relative mx-auto aspect-[2/3] w-full max-w-[340px] overflow-hidden rounded-[1.4rem] border border-[#dfb9bf]/25 bg-[#211a1e] shadow-[0_28px_90px_rgba(0,0,0,0.55)] ring-1 ring-white/[0.04]">
             {!imageFailed && story.coverImage ? (
               <img
                 src={story.coverImage}
@@ -631,7 +681,11 @@ export default function MangaDetails() {
           </div>
 
           {/* INFORMATION */}
-          <div className="flex flex-col justify-center">
+          <div className="flex min-w-0 flex-col justify-center py-2">
+            <p className="mb-5 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.34em] text-[#c69aa1]">
+              <span className="h-px w-8 bg-[#c69aa1]/70" />
+              Featured story
+            </p>
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <span className="rounded-full border border-[#c69aa1]/25 bg-[#c69aa1]/10 px-3 py-1 text-xs font-bold text-[#dfb9bf]">
                 {story.status}
@@ -644,7 +698,7 @@ export default function MangaDetails() {
               )}
             </div>
 
-            <h1 className="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+            <h1 className="max-w-4xl font-serif text-4xl font-medium leading-[1.08] tracking-[-0.035em] text-[#f4e9eb] sm:text-5xl lg:text-7xl">
               {story.title}
             </h1>
 
@@ -702,13 +756,32 @@ export default function MangaDetails() {
 
             {/* ACTIONS */}
             <div className="mt-8 flex flex-wrap gap-3">
-              <a
-                href="#chapters"
-                className="flex items-center gap-2 rounded-xl bg-[#c69aa1] px-6 py-3.5 text-sm font-bold text-[#211619] transition hover:-translate-y-0.5 hover:bg-[#dfb9bf]"
-              >
-                <BookOpen size={18} />
-                Read chapters
-              </a>
+              {chapters.length > 0 ? (
+                <>
+                  <Link
+                    to={`/manga/${story.id}/chapter/${firstChapter}`}
+                    className="flex items-center gap-2 rounded-xl bg-[#d8b1b7] px-6 py-3.5 text-sm font-bold text-[#211619] shadow-[0_10px_35px_rgba(198,154,161,0.18)] transition hover:-translate-y-0.5 hover:bg-[#edcbd0]"
+                  >
+                    <BookOpen size={18} />
+                    Start reading
+                  </Link>
+                  <Link
+                    to={`/manga/${story.id}/chapter/${latestChapter}`}
+                    className="flex items-center gap-2 rounded-xl border border-[#c69aa1]/30 bg-[#211a1e]/70 px-5 py-3.5 text-sm font-semibold text-[#eadde0] transition hover:border-[#c69aa1]/65 hover:bg-[#c69aa1]/10"
+                  >
+                    Latest chapter
+                    <ChevronRight size={17} />
+                  </Link>
+                </>
+              ) : (
+                <a
+                  href="#chapters"
+                  className="flex items-center gap-2 rounded-xl bg-[#d8b1b7] px-6 py-3.5 text-sm font-bold text-[#211619] transition hover:-translate-y-0.5 hover:bg-[#edcbd0]"
+                >
+                  <BookOpen size={18} />
+                  Explore chapters
+                </a>
+              )}
 
               <button
                 onClick={toggleBookmark}
@@ -1139,6 +1212,60 @@ export default function MangaDetails() {
           </div>
         )}
       </section>
+
+      {/* MORE TO EXPLORE */}
+      {relatedStories.length > 0 && (
+        <section className="mx-auto max-w-7xl px-5 pb-16 pt-4">
+          <div className="mb-7 flex items-end justify-between gap-4 border-b border-[#c69aa1]/10 pb-5">
+            <div>
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.28em] text-[#c69aa1]">
+                Curated for your next read
+              </p>
+              <h2 className="font-serif text-2xl font-medium tracking-tight text-[#f1e7e8] sm:text-3xl">
+                More worlds to explore
+              </h2>
+            </div>
+            <Link
+              to="/discover"
+              className="shrink-0 text-xs font-semibold text-[#cda7ae] transition hover:text-white"
+            >
+              Explore all <span aria-hidden="true">↗</span>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-5">
+            {relatedStories.map((item) => (
+              <Link
+                key={item.id}
+                to={`/manga/${item.id}`}
+                className="group min-w-0"
+              >
+                <div className="relative aspect-[3/4] overflow-hidden rounded-xl border border-[#c69aa1]/15 bg-[#211a1e] shadow-lg shadow-black/20">
+                  {item.cover_image ? (
+                    <img
+                      src={item.cover_image}
+                      alt={`${item.title} cover`}
+                      loading="lazy"
+                      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-[#392b31] via-[#211a1e] to-[#110e10]">
+                      <span className="font-serif text-5xl text-[#dfb9bf]/60">✧</span>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent opacity-70 transition group-hover:opacity-100" />
+                </div>
+                <h3 className="mt-3 line-clamp-2 text-sm font-semibold text-[#e9dcde] transition group-hover:text-[#dfb9bf]">
+                  {item.title}
+                </h3>
+                <p className="mt-1 truncate text-xs text-[#89777c]">
+                  {item.genreList?.slice(0, 2).join(' · ') || item.status || 'Discover'}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* FOOTER */}
       <footer className="border-t border-[#c69aa1]/10 bg-[#0d0a0c] px-5 py-8 text-center text-xs text-[#76676c]">
