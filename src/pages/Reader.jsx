@@ -158,7 +158,7 @@ export default function Reader() {
       setCurrentChapter(null)
       setPublishedChapters([])
 
-      if (!Number.isInteger(chapter) || chapter < 1) {
+      if (!Number.isInteger(chapter) || chapter < 0) {
         setLoading(false)
         return
       }
