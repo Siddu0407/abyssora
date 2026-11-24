@@ -415,16 +415,17 @@ export default function Reader() {
     : []
 
   return (
-    <main className={`min-h-screen ${theme.page} ${theme.text}`}>
+    <main className={`relative min-h-screen overflow-x-clip ${theme.page} ${theme.text}`}>
+      <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 -z-0 h-[520px] bg-[radial-gradient(ellipse_at_top,rgba(198,154,161,0.10),transparent_68%)]" />
 
       {/* TOP NAVIGATION */}
       <header
         className={`sticky top-0 z-50 border-b ${theme.border} ${theme.header} backdrop-blur-xl`}
       >
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3.5 sm:px-6">
 
           <Link to="/" className="group flex shrink-0 items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#c69aa1]/25 bg-[#211a1e] transition group-hover:border-[#c69aa1]/60">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#c69aa1]/25 bg-gradient-to-br from-[#2b2025] to-[#171215] shadow-[0_8px_24px_rgba(0,0,0,0.22)] transition group-hover:border-[#c69aa1]/60">
               <Emblem size={32} />
             </div>
 
@@ -439,17 +440,10 @@ export default function Reader() {
             </div>
           </Link>
 
-          <div className="hidden text-center sm:block">
-            <p className="text-sm font-bold">
-              {story.title}
-            </p>
-
-            <p className={`text-xs ${theme.muted}`}>
-              Chapter {chapter}
-              {currentChapter.title
-                ? ` · ${currentChapter.title}`
-                : ''}
-            </p>
+          <div className="hidden min-w-0 text-center sm:block">
+            <p className={`text-[9px] font-bold uppercase tracking-[0.28em] ${theme.accent}`}>Now reading</p>
+            <p className="mt-1 max-w-[360px] truncate text-sm font-semibold tracking-wide">{story.title}</p>
+            <p className={`mt-0.5 text-[11px] ${theme.muted}`}>Chapter {chapter}{currentChapter.title ? ` · ${currentChapter.title}` : ''}</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -479,7 +473,7 @@ export default function Reader() {
         </div>
 
         {/* READING PROGRESS */}
-        <div className="h-1 bg-black/10">
+        <div className="h-[2px] bg-black/10">
           <div
             className={`h-full ${theme.progress} transition-all duration-150`}
             style={{ width: `${progress}%` }}
@@ -488,7 +482,7 @@ export default function Reader() {
 
         {/* READER SETTINGS */}
         {showSettings && (
-          <div className={`border-t ${theme.border} px-5 py-5`}>
+          <div className={`border-t ${theme.border} ${theme.panel}/90 px-5 py-6 backdrop-blur-2xl`}>
             <div className="mx-auto grid max-w-4xl gap-6 sm:grid-cols-2">
 
               {/* PAGE WIDTH */}
@@ -581,36 +575,22 @@ export default function Reader() {
       >
 
         {/* CHAPTER HEADING */}
-        <div className="py-8 text-center">
-
-          <Link
-            to={`/manga/${id}`}
-            className={`inline-flex items-center gap-2 text-sm ${theme.secondary} transition hover:text-[#c69aa1]`}
-          >
-            <ArrowLeft size={16} />
-            Back to {story.title}
+        <div className="relative py-10 text-center sm:py-14">
+          <Link to={`/manga/${id}`} className={`inline-flex items-center gap-2 rounded-full border ${theme.border} px-4 py-2 text-xs font-medium ${theme.secondary} transition hover:border-[#c69aa1]/50 hover:text-[#c69aa1]`}>
+            <ArrowLeft size={14} /> Back to {story.title}
           </Link>
-
-          <h1 className="mt-6 text-2xl font-semibold tracking-tight sm:text-3xl">
-            Chapter {chapter}
-          </h1>
-
-          {currentChapter.title && (
-            <p className={`mt-2 text-sm ${theme.secondary}`}>
-              {currentChapter.title}
-            </p>
-          )}
-
-          <p className={`mt-3 text-[10px] font-semibold uppercase tracking-[0.25em] ${theme.muted}`}>
-            ABYSSORA · {pages.length} pages
-          </p>
-
-          <div className="mx-auto mt-5 h-px w-16 bg-[#c69aa1]/40" />
-
+          <p className={`mt-8 text-[9px] font-bold uppercase tracking-[0.38em] ${theme.accent}`}>ABYSSORA · THE READING ROOM</p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] sm:text-5xl">Chapter {chapter}</h1>
+          {currentChapter.title && <p className={`mt-3 text-sm sm:text-base ${theme.secondary}`}>{currentChapter.title}</p>}
+          <div className="mx-auto mt-6 flex items-center justify-center gap-3">
+            <span className={`h-px w-8 ${theme.border} border-t`} />
+            <span className={`text-[9px] font-semibold uppercase tracking-[0.24em] ${theme.muted}`}>{pages.length} pages · {story.title}</span>
+            <span className={`h-px w-8 ${theme.border} border-t`} />
+          </div>
         </div>
 
         {/* ACTUAL CHAPTER PAGES */}
-        <div className="space-y-1">
+        <div className="overflow-hidden rounded-sm bg-black/20 shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
 
           {pages.length > 0 ? (
             pages.map((page, index) => (
@@ -620,7 +600,7 @@ export default function Reader() {
                 alt={`${story.title} Chapter ${chapter} Page ${index + 1}`}
                 loading={index < 2 ? 'eager' : 'lazy'}
                 onLoad={handlePageLoad}
-                className="mx-auto block h-auto w-full"
+                className="mx-auto block h-auto w-full select-none"
               />
             ))
           ) : (
@@ -657,16 +637,15 @@ export default function Reader() {
         />
 
         {/* END OF CHAPTER */}
-        <div className="my-10 rounded-2xl border border-[#c69aa1]/20 bg-[#c69aa1]/[0.05] p-8 text-center">
+        <div className="relative my-12 overflow-hidden rounded-[28px] border border-[#c69aa1]/20 bg-gradient-to-br from-[#c69aa1]/[0.10] via-[#c69aa1]/[0.035] to-transparent px-6 py-12 text-center shadow-[0_24px_70px_rgba(0,0,0,0.12)] sm:py-14">
 
           <Emblem size={35} />
 
-          <h2 className="mt-4 text-xl font-semibold">
-            End of Chapter {chapter}
-          </h2>
+          <p className={`mt-5 text-[9px] font-bold uppercase tracking-[0.34em] ${theme.accent}`}>You reached the end</p>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">End of Chapter {chapter}</h2>
 
-          <p className={`mt-2 text-sm ${theme.secondary}`}>
-            Thanks for reading on ABYSSORA.
+          <p className={`mx-auto mt-3 max-w-sm text-sm leading-7 ${theme.secondary}`}>
+            Take a breath. The next page of this world is waiting whenever you are.
           </p>
 
           <p className={`mt-4 text-[9px] font-semibold uppercase tracking-[0.3em] ${theme.muted}`}>
@@ -676,14 +655,14 @@ export default function Reader() {
         </div>
 
         {/* CHAPTER NAVIGATION */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
 
           {previousChapter ? (
             <button
               onClick={() =>
                 navigate(chapterUrl(previousChapter.chapter_number))
               }
-              className={`flex items-center justify-center gap-2 rounded-xl border ${theme.border} px-4 py-4 text-sm font-semibold transition hover:border-[#c69aa1]/60`}
+              className={`flex items-center justify-center gap-2 rounded-2xl border ${theme.border} px-4 py-4 text-sm font-semibold transition duration-200 hover:-translate-y-0.5 hover:border-[#c69aa1]/60`}
             >
               <ArrowLeft size={17} />
               Previous
@@ -702,7 +681,7 @@ export default function Reader() {
               onClick={() =>
                 navigate(chapterUrl(nextChapter.chapter_number))
               }
-              className={`flex items-center justify-center gap-2 rounded-xl px-4 py-4 text-sm font-bold transition ${theme.button}`}
+              className={`flex items-center justify-center gap-2 rounded-2xl px-4 py-4 text-sm font-bold shadow-[0_10px_30px_rgba(198,154,161,0.12)] transition duration-200 hover:-translate-y-0.5 ${theme.button}`}
             >
               Next chapter
               <ArrowRight size={17} />
@@ -719,7 +698,7 @@ export default function Reader() {
         </div>
 
         {/* CHAPTER SELECTOR */}
-        <div className="mt-6 flex items-center justify-center gap-3">
+        <div className={`mt-7 flex flex-col items-center justify-center gap-3 rounded-2xl border ${theme.border} ${theme.panel}/70 p-4 sm:flex-row sm:gap-4`}>
 
           <List size={17} className="text-[#c69aa1]" />
 
@@ -729,7 +708,7 @@ export default function Reader() {
               onChange={(event) =>
                 navigate(chapterUrl(Number(event.target.value)))
               }
-              className={`max-w-full appearance-none rounded-xl border ${theme.border} ${theme.panel} px-4 py-3 pr-10 text-sm ${theme.text} outline-none focus:border-[#c69aa1]`}
+              className={`max-w-full appearance-none rounded-xl border ${theme.border} ${theme.panel} px-5 py-3 pr-11 text-sm ${theme.text} outline-none transition focus:border-[#c69aa1]`}
             >
               {[...publishedChapters]
                 .reverse()
@@ -764,7 +743,7 @@ export default function Reader() {
       </section>
 
       {/* FOOTER */}
-      <footer className={`border-t ${theme.border} py-7 text-center text-xs ${theme.muted}`}>
+      <footer className={`relative border-t ${theme.border} py-9 text-center text-[10px] font-medium uppercase tracking-[0.22em] ${theme.muted}`}>
         © 2026 ABYSSORA. A universe of stories awaits.
       </footer>
 
