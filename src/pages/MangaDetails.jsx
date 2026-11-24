@@ -174,6 +174,7 @@ export default function MangaDetails() {
       setLoading(true)
       setError('')
       setImageFailed(false)
+      setRelatedStories([])
       setChapterSearch('')
       setShowAllChapters(false)
       setReadingOrder('latest')
@@ -246,6 +247,7 @@ export default function MangaDetails() {
           ).map((genre) => String(genre).toLowerCase())
 
           const recommendations = (catalogue || [])
+            .filter((item) => String(item.status || '').toLowerCase() !== 'draft')
             .map((item) => {
               const itemGenres = (Array.isArray(item.genres)
                 ? item.genres
