@@ -25,6 +25,10 @@ import { supabase } from '../lib/supabase'
 const BASE_GENRES = [
   'Action',
   'Adventure',
+  'Martial Arts',
+  'Revenge',
+  'Romance',
+  'System / Leveling',
   'Comedy',
   'Drama',
   'Fantasy',
