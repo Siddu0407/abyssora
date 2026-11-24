@@ -409,17 +409,16 @@ export default function ChapterManagement({ comics = [] }) {
 
   const handleCreateChapter = async (event) => {
     event.preventDefault()
+    const number = Number(chapterNumber)
 
     if (!selectedComicId) {
       setError('Please select a comic first.')
       return
     }
 
-    const number = Number(chapterNumber)
-
-    if (!Number.isInteger(number) || number < 1) {
-      setError('Enter a valid chapter number greater than zero.')
-      return
+    if (!Number.isInteger(number) || number < 0) {
+      setError('Enter a valid chapter number (zero or greater).')
+       return
     }
 
     if (processingFiles) {
@@ -434,7 +433,7 @@ export default function ChapterManagement({ comics = [] }) {
 
     if (
       chapters.some(
-        (chapter) => chapter.chapter_number === number
+        (chapter) => Number(chapter.chapter_number) === number
       )
     ) {
       setError(`Chapter ${number} already exists for this comic.`)
@@ -744,7 +743,7 @@ export default function ChapterManagement({ comics = [] }) {
 
                 <input
                   type="number"
-                  min="1"
+                  min="0"
                   required
                   value={chapterNumber}
                   onChange={(event) =>
