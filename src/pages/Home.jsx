@@ -12,7 +12,11 @@ import {
 
 import { supabase } from '../lib/supabase'
 
-const genres = ['All', 'Action', 'Fantasy', 'Magic', 'Adventure', 'Comedy', 'Drama']
+const genres = [
+  'All', 'Action', 'Adventure', 'Fantasy', 'Martial Arts', 'Revenge',
+  'Romance', 'System / Leveling', 'Magic', 'Comedy', 'Drama', 'Horror',
+  'Mystery', 'Sci-Fi', 'Slice of Life', 'Supernatural', 'Thriller',
+]
 
 const genreDiscoveries = [
   {
@@ -28,6 +32,34 @@ const genreDiscoveries = [
     icon: Sparkles,
     tint: 'text-[#c6a6b9]',
     glow: 'from-[#76566e]/25',
+  },
+  {
+    name: 'Martial Arts',
+    description: 'Masterful fighters, rival schools and legendary techniques.',
+    icon: Flame,
+    tint: 'text-[#d8a17f]',
+    glow: 'from-[#80533e]/25',
+  },
+  {
+    name: 'Revenge',
+    description: 'Unfinished scores, hard choices and stories of redemption.',
+    icon: ShieldCheck,
+    tint: 'text-[#c69aa1]',
+    glow: 'from-[#75434e]/25',
+  },
+  {
+    name: 'Romance',
+    description: 'Heartfelt connections and unforgettable relationships.',
+    icon: Heart,
+    tint: 'text-[#d39da8]',
+    glow: 'from-[#88515e]/25',
+  },
+  {
+    name: 'System / Leveling',
+    description: 'Quests, skill trees and heroes growing beyond their limits.',
+    icon: Sparkles,
+    tint: 'text-[#b6a9c7]',
+    glow: 'from-[#625875]/25',
   },
   {
     name: 'Magic',
@@ -474,6 +506,19 @@ export default function Home() {
       .slice(0, 5)
   }, [manga])
 
+  // Keep genre filters in sync with both the curated list and live catalog data.
+  const availableGenres = useMemo(() => {
+    const unique = new Map()
+
+    ;[...genres.slice(1), ...manga.flatMap(getComicGenres)].forEach((value) => {
+      const name = String(value || '').trim()
+      const key = name.toLowerCase()
+      if (name && !unique.has(key)) unique.set(key, name)
+    })
+
+    return ['All', ...unique.values()]
+  }, [manga])
+
   // LOGOUT
   const handleLogout = async () => {
     setLoggingOut(true)
@@ -538,7 +583,9 @@ export default function Home() {
       const title = String(item.title || '')
 
       const matchesSearch =
+        !searchTerm ||
         title.toLowerCase().includes(searchTerm) ||
+        String(item.author || '').toLowerCase().includes(searchTerm) ||
         itemGenres.some((value) =>
           value.toLowerCase().includes(searchTerm)
         )
@@ -1148,10 +1195,10 @@ export default function Home() {
         {/* TRENDING */}
         <section id="trending" className="mt-16 scroll-mt-28">
           <SectionHeading
-            eyebrow="Popular right now"
-            title="Trending stories"
-            description="Stories readers can't stop coming back to."
-            icon={Flame}
+            eyebrow="Catalog ratings"
+            title="Highest rated stories"
+            description="Browse titles with the strongest ratings in the ABYSSORA catalog."
+            icon={Star}
           />
 
           {loadingManga ? (
@@ -1191,7 +1238,7 @@ export default function Home() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by manga title or genre..."
+                placeholder="Search by title, creator or genre..."
                 className="w-full bg-transparent text-sm text-[#f1e7e8] outline-none placeholder:text-[#76676c]"
               />
 
@@ -1224,7 +1271,7 @@ export default function Home() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {genres.map((genre) => (
+              {availableGenres.map((genre) => (
                 <button
                   key={genre}
                   onClick={() => setActiveGenre(genre)}
