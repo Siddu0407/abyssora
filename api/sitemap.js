@@ -31,11 +31,33 @@ function formatDate(value) {
     : date.toISOString()
 }
 
+function collectGenres(comics) {
+  const genres = new Map()
+
+  for (const comic of comics) {
+    const values = [
+      ...(Array.isArray(comic.genres) ? comic.genres : []),
+      ...(typeof comic.genre === 'string' ? comic.genre.split(/[,;|]/) : []),
+    ]
+
+    for (const value of values) {
+      if (typeof value !== 'string') continue
+
+      const name = value.trim()
+      const key = name.toLowerCase()
+
+      if (name && !genres.has(key)) genres.set(key, name)
+    }
+  }
+
+  return [...genres.values()]
+}
+
 export default async function handler(req, res) {
   try {
     const { data: comics, error } = await supabase
       .from('comics')
-      .select('id, status, updated_at, created_at')
+      .select('id, status, updated_at, created_at, genre, genres')
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -52,7 +74,16 @@ export default async function handler(req, res) {
         changefreq: 'daily',
         priority: '1.0',
       },
-
+      {
+        loc: `${SITE_URL}/discover`,
+        changefreq: 'weekly',
+        priority: '0.8',
+      },
+      ...collectGenres(publicComics).map((genre) => ({
+        loc: `${SITE_URL}/genre/${encodeURIComponent(genre.toLowerCase())}`,
+        changefreq: 'weekly',
+        priority: '0.7',
+      })),
       ...publicComics.map((comic) => ({
         loc: `${SITE_URL}/manga/${encodeURIComponent(comic.id)}`,
         lastmod: formatDate(comic.updated_at || comic.created_at),
