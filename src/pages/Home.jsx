@@ -268,6 +268,8 @@ export default function Home() {
   const [loggingOut, setLoggingOut] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [activeFeaturedIndex, setActiveFeaturedIndex] = useState(0)
+  const [mobileGenresOpen, setMobileGenresOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
 
   // LOAD MANGA
   useEffect(() => {
@@ -619,10 +621,18 @@ export default function Home() {
     })
   }, [manga, search, activeGenre, sortBy])
 
+  const totalPages = Math.ceil(filteredManga.length / 15)
+  const paginatedManga = filteredManga.slice((currentPage - 1) * 15, currentPage * 15)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, activeGenre, sortBy])
+
   const clearFilters = () => {
     setSearch('')
     setActiveGenre('All')
     setSortBy('rating')
+    setCurrentPage(1)
   }
 
   const hasActiveFilters = search.trim() !== '' || activeGenre !== 'All'
@@ -1137,7 +1147,95 @@ export default function Home() {
             }
           />
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="md:hidden">
+            <button
+              type="button"
+              onClick={() => setMobileGenresOpen((open) => !open)}
+              aria-expanded={mobileGenresOpen}
+              className="flex w-full items-center justify-between rounded-2xl border border-[#c69aa1]/20 bg-[#191417] px-4 py-3.5 text-left"
+            >
+              <span className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#c69aa1]/10 text-[#d5a2aa]">
+                  <Compass size={17} />
+                </span>
+                <span>
+                  <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#89777c]">Choose a genre</span>
+                  <span className="mt-0.5 block text-sm font-semibold text-[#f1e7e8]">{activeGenre === 'All' ? 'All genres' : activeGenre}</span>
+                </span>
+              </span>
+              <ChevronRight size={18} className={`text-[#c69aa1] transition-transform ${mobileGenresOpen ? 'rotate-90' : ''}`} />
+            </button>
+
+            {mobileGenresOpen && (
+              <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl border border-[#c69aa1]/10 bg-[#191417] p-3">
+                {availableGenres.map((genre) => (
+                  <button
+                    key={genre}
+                    type="button"
+                    onClick={() => {
+                      setActiveGenre(genre)
+                      setSearch('')
+                      setMobileGenresOpen(false)
+                    }}
+                    aria-pressed={activeGenre === genre}
+                    className={`rounded-xl border px-3 py-2.5 text-left text-xs font-semibold transition ${activeGenre === genre ? 'border-[#c69aa1] bg-[#c69aa1] text-[#211619]' : 'border-[#c69aa1]/10 bg-[#110e10] text-[#b9a8ac]'}`}
+                  >
+                    {genre}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {activeGenre !== 'All' && (
+              <div className="mt-5">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-[#f1e7e8]">{activeGenre} stories</p>
+                    <p className="mt-1 text-[10px] text-[#89777c]">Swipe to explore titles</p>
+                  </div>
+                  <span className="text-xs font-semibold text-[#c69aa1]">{filteredManga.length} titles</span>
+                </div>
+                {filteredManga.length ? (
+                  <div className="-mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {filteredManga.map((item) => (
+                      <Link
+                        key={item.id}
+                        to={`/manga/${item.id}`}
+                        className="w-[116px] shrink-0 snap-start"
+                      >
+                        <div className="relative aspect-[3/4] overflow-hidden rounded-xl border border-[#c69aa1]/15 bg-[#211a1e]">
+                          {item.coverImage ? (
+                            <img src={item.coverImage} alt={item.title} loading="lazy" className="h-full w-full object-cover" />
+                          ) : (
+                            <div className={`flex h-full items-center justify-center bg-gradient-to-br ${item.colors}`}>
+                              <span className="text-4xl text-[#f1e7e8]/60">{item.symbol}</span>
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
+                          <div className="absolute bottom-0 p-2.5">
+                            <p className="line-clamp-2 text-xs font-bold leading-snug text-white">{item.title}</p>
+                            <p className="mt-1 text-[9px] text-white/65">{item.chapter}</p>
+                          </div>
+                        </div>
+                        <p className="mt-1.5 truncate text-[10px] text-[#95858a]">{item.author || activeGenre}</p>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="rounded-xl border border-[#c69aa1]/10 bg-[#191417] p-4 text-xs text-[#99898e]">No stories in this genre yet. Check back as the collection grows.</p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => scrollTo('explore')}
+                  className="mt-2 text-xs font-semibold text-[#c69aa1]"
+                >
+                  Browse full results <ArrowUpRight size={13} className="inline" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="hidden md:grid md:grid-cols-3 xl:grid-cols-6 gap-3">
             {genreDiscoveries.map((genre) => {
               const Icon = genre.icon
 
@@ -1206,9 +1304,10 @@ export default function Home() {
               Loading comics from ABYSSORA...
             </p>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-3 lg:grid-cols-6">
               {[...manga]
                 .sort((a, b) => Number(b.rating) - Number(a.rating))
+                .slice(0, 12)
                 .map((item, index) => (
                   <MangaCard
                     key={item.id}
@@ -1340,7 +1439,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-              {filteredManga.map((item) => (
+              {paginatedManga.map((item) => (
                 <MangaCard
                   key={item.id}
                   item={item}
@@ -1349,6 +1448,59 @@ export default function Home() {
                 />
               ))}
             </div>
+          )}
+
+          {!loadingManga && !mangaError && filteredManga.length > 15 && (
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentPage((page) => Math.max(1, page - 1))
+                  scrollTo('explore')
+                }}
+                disabled={currentPage === 1}
+                className="rounded-xl border border-[#c69aa1]/20 px-4 py-2.5 text-xs font-semibold text-[#dfb9bf] transition hover:border-[#c69aa1]/50 hover:bg-[#c69aa1]/10 disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                Previous
+              </button>
+
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  onClick={() => {
+                    setCurrentPage(page)
+                    scrollTo('explore')
+                  }}
+                  aria-current={currentPage === page ? 'page' : undefined}
+                  className={`h-10 min-w-10 rounded-xl border px-3 text-xs font-semibold transition ${
+                    currentPage === page
+                      ? 'border-[#c69aa1] bg-[#c69aa1] text-[#211619]'
+                      : 'border-[#c69aa1]/20 text-[#c8b9bd] hover:border-[#c69aa1]/50 hover:bg-[#c69aa1]/10'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentPage((page) => Math.min(totalPages, page + 1))
+                  scrollTo('explore')
+                }}
+                disabled={currentPage === totalPages}
+                className="rounded-xl border border-[#c69aa1]/20 px-4 py-2.5 text-xs font-semibold text-[#dfb9bf] transition hover:border-[#c69aa1]/50 hover:bg-[#c69aa1]/10 disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                Next
+              </button>
+            </div>
+          )}
+
+          {!loadingManga && filteredManga.length > 0 && (
+            <p className="mt-3 text-center text-[11px] text-[#89777c]">
+              Page {currentPage} of {Math.max(totalPages, 1)} · Showing {Math.min((currentPage - 1) * 15 + 1, filteredManga.length)}–{Math.min(currentPage * 15, filteredManga.length)} of {filteredManga.length} stories
+            </p>
           )}
         </section>
 
