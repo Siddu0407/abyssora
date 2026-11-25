@@ -270,6 +270,7 @@ export default function Home() {
   const [activeFeaturedIndex, setActiveFeaturedIndex] = useState(0)
   const [mobileGenresOpen, setMobileGenresOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [desktopCurrentPage, setDesktopCurrentPage] = useState(1)
 
   // LOAD MANGA
   useEffect(() => {
@@ -623,9 +624,12 @@ export default function Home() {
 
   const totalPages = Math.ceil(filteredManga.length / 15)
   const paginatedManga = filteredManga.slice((currentPage - 1) * 15, currentPage * 15)
+  const desktopTotalPages = Math.ceil(filteredManga.length / 12)
+  const desktopPaginatedManga = filteredManga.slice((desktopCurrentPage - 1) * 12, desktopCurrentPage * 12)
 
   useEffect(() => {
     setCurrentPage(1)
+    setDesktopCurrentPage(1)
   }, [search, activeGenre, sortBy])
 
   const clearFilters = () => {
@@ -633,6 +637,7 @@ export default function Home() {
     setActiveGenre('All')
     setSortBy('rating')
     setCurrentPage(1)
+    setDesktopCurrentPage(1)
   }
 
   const hasActiveFilters = search.trim() !== '' || activeGenre !== 'All'
@@ -1438,8 +1443,18 @@ export default function Home() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6 md:hidden">
               {paginatedManga.map((item) => (
+                <MangaCard
+                  key={item.id}
+                  item={item}
+                  bookmarks={bookmarks}
+                  toggleBookmark={toggleBookmark}
+                />
+              ))}
+            </div>
+            <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {desktopPaginatedManga.map((item) => (
                 <MangaCard
                   key={item.id}
                   item={item}
@@ -1450,6 +1465,7 @@ export default function Home() {
             </div>
           )}
 
+          <div className="md:hidden">
           {!loadingManga && !mangaError && filteredManga.length > 15 && (
             <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
               <button
@@ -1496,12 +1512,65 @@ export default function Home() {
               </button>
             </div>
           )}
+          </div>
 
-          {!loadingManga && filteredManga.length > 0 && (
-            <p className="mt-3 text-center text-[11px] text-[#89777c]">
-              Page {currentPage} of {Math.max(totalPages, 1)} · Showing {Math.min((currentPage - 1) * 15 + 1, filteredManga.length)}–{Math.min(currentPage * 15, filteredManga.length)} of {filteredManga.length} stories
-            </p>
+          <div className="hidden md:block">
+          {!loadingManga && !mangaError && filteredManga.length > 12 && (
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDesktopCurrentPage((page) => Math.max(1, page - 1))
+                  scrollTo('explore')
+                }}
+                disabled={desktopCurrentPage === 1}
+                className="rounded-xl border border-[#c69aa1]/20 px-4 py-2.5 text-xs font-semibold text-[#dfb9bf] transition hover:border-[#c69aa1]/50 hover:bg-[#c69aa1]/10 disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                Previous
+              </button>
+
+              {Array.from({ length: desktopTotalPages }, (_, index) => index + 1).map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  onClick={() => {
+                    setDesktopCurrentPage(page)
+                    scrollTo('explore')
+                  }}
+                  aria-current={desktopCurrentPage === page ? 'page' : undefined}
+                  className={`h-10 min-w-10 rounded-xl border px-3 text-xs font-semibold transition ${
+                    desktopCurrentPage === page
+                      ? 'border-[#c69aa1] bg-[#c69aa1] text-[#211619]'
+                      : 'border-[#c69aa1]/20 text-[#c8b9bd] hover:border-[#c69aa1]/50 hover:bg-[#c69aa1]/10'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setDesktopCurrentPage((page) => Math.min(desktopTotalPages, page + 1))
+                  scrollTo('explore')
+                }}
+                disabled={desktopCurrentPage === desktopTotalPages}
+                className="rounded-xl border border-[#c69aa1]/20 px-4 py-2.5 text-xs font-semibold text-[#dfb9bf] transition hover:border-[#c69aa1]/50 hover:bg-[#c69aa1]/10 disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                Next
+              </button>
+            </div>
           )}
+
+
+          </div>
+
+          <p className="mt-3 text-center text-[11px] text-[#89777c] md:hidden">
+            Page {currentPage} of {Math.max(totalPages, 1)} · Showing {Math.min((currentPage - 1) * 15 + 1, filteredManga.length)}–{Math.min(currentPage * 15, filteredManga.length)} of {filteredManga.length} stories
+          </p>
+          <p className="mt-3 hidden text-center text-[11px] text-[#89777c] md:block">
+            Page {desktopCurrentPage} of {Math.max(desktopTotalPages, 1)} · Showing {Math.min((desktopCurrentPage - 1) * 12 + 1, filteredManga.length)}–{Math.min(desktopCurrentPage * 12, filteredManga.length)} of {filteredManga.length} stories
+          </p>
         </section>
 
         {/* LATEST UPDATES */}
