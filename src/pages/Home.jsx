@@ -1443,6 +1443,7 @@ export default function Home() {
               </button>
             </div>
           ) : (
+            <>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6 md:hidden">
               {paginatedManga.map((item) => (
                 <MangaCard
@@ -1463,6 +1464,7 @@ export default function Home() {
                 />
               ))}
             </div>
+            </>
           )}
 
           <div className="md:hidden">
