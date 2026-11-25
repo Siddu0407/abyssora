@@ -13,6 +13,32 @@ import {
 
 import { supabase } from '../lib/supabase'
 
+const SITE_URL = 'https://abyssora-ten.vercel.app'
+
+function setMeta(attribute, key, content) {
+  let element = document.head.querySelector(`meta[${attribute}="${key}"]`)
+
+  if (!element) {
+    element = document.createElement('meta')
+    element.setAttribute(attribute, key)
+    document.head.appendChild(element)
+  }
+
+  element.setAttribute('content', content)
+}
+
+function setCanonical(url) {
+  let element = document.head.querySelector('link[rel="canonical"]')
+
+  if (!element) {
+    element = document.createElement('link')
+    element.setAttribute('rel', 'canonical')
+    document.head.appendChild(element)
+  }
+
+  element.setAttribute('href', url)
+}
+
 function Emblem({ size = 42 }) {
   return (
     <img
@@ -81,6 +107,37 @@ export default function Genre() {
   const formattedGenre = genreName
     ? genreName.charAt(0).toUpperCase() + genreName.slice(1).toLowerCase()
     : ''
+
+  useEffect(() => {
+    const genre = formattedGenre || 'Manga'
+    const pageTitle = `${genre} Manga | Explore ${genre} Stories - ABYSSORA`
+    const description = `Explore ${genre.toLowerCase()} manga on ABYSSORA. Discover stories, creators, and your next favourite read.`
+    const canonicalUrl = `${SITE_URL}/genre/${encodeURIComponent(String(genreName || '').toLowerCase())}`
+
+    document.title = pageTitle
+    setMeta('name', 'description', description)
+    setMeta('name', 'robots', 'index, follow')
+    setCanonical(canonicalUrl)
+    setMeta('property', 'og:type', 'website')
+    setMeta('property', 'og:site_name', 'ABYSSORA')
+    setMeta('property', 'og:title', pageTitle)
+    setMeta('property', 'og:description', description)
+    setMeta('property', 'og:url', canonicalUrl)
+    setMeta('name', 'twitter:card', 'summary')
+    setMeta('name', 'twitter:title', pageTitle)
+    setMeta('name', 'twitter:description', description)
+
+    return () => {
+      document.title = 'ABYSSORA - Read Manga Online'
+      setMeta('name', 'description', 'Explore ABYSSORA, your manga reading destination. Discover manga series, browse the library, and enjoy reading your favourite stories online.')
+      setCanonical(`${SITE_URL}/`)
+      setMeta('property', 'og:title', 'ABYSSORA - Read Manga Online')
+      setMeta('property', 'og:description', 'Discover manga series and enjoy reading your favourite stories online with ABYSSORA.')
+      setMeta('property', 'og:url', `${SITE_URL}/`)
+      setMeta('name', 'twitter:title', 'ABYSSORA - Read Manga Online')
+      setMeta('name', 'twitter:description', 'Discover and read manga online with ABYSSORA.')
+    }
+  }, [genreName, formattedGenre])
 
   useEffect(() => {
     let isMounted = true
