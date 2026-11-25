@@ -22,6 +22,32 @@ import {
 
 import { supabase } from '../lib/supabase'
 
+const SITE_URL = 'https://abyssora-ten.vercel.app'
+
+function setDiscoverMeta(attribute, key, content) {
+  let element = document.head.querySelector(`meta[${attribute}="${key}"]`)
+
+  if (!element) {
+    element = document.createElement('meta')
+    element.setAttribute(attribute, key)
+    document.head.appendChild(element)
+  }
+
+  element.setAttribute('content', content)
+}
+
+function setDiscoverCanonical(url) {
+  let element = document.head.querySelector('link[rel="canonical"]')
+
+  if (!element) {
+    element = document.createElement('link')
+    element.setAttribute('rel', 'canonical')
+    document.head.appendChild(element)
+  }
+
+  element.setAttribute('href', url)
+}
+
 const BASE_GENRES = [
   'Action',
   'Adventure',
@@ -163,6 +189,36 @@ export default function Discover() {
   const [activeGenre, setActiveGenre] = useState('All')
   const [sortBy, setSortBy] = useState('latest')
   const [menuOpen, setMenuOpen] = useState(false)
+
+  useEffect(() => {
+    const pageTitle = 'Discover Manga & Manhwa | Browse Stories - ABYSSORA'
+    const description = 'Discover manga and manhwa on ABYSSORA. Browse action, fantasy, romance, martial arts, and more to find your next favourite story.'
+    const canonicalUrl = `${SITE_URL}/discover`
+
+    document.title = pageTitle
+    setDiscoverMeta('name', 'description', description)
+    setDiscoverMeta('name', 'robots', 'index, follow')
+    setDiscoverCanonical(canonicalUrl)
+    setDiscoverMeta('property', 'og:type', 'website')
+    setDiscoverMeta('property', 'og:site_name', 'ABYSSORA')
+    setDiscoverMeta('property', 'og:title', pageTitle)
+    setDiscoverMeta('property', 'og:description', description)
+    setDiscoverMeta('property', 'og:url', canonicalUrl)
+    setDiscoverMeta('name', 'twitter:card', 'summary')
+    setDiscoverMeta('name', 'twitter:title', pageTitle)
+    setDiscoverMeta('name', 'twitter:description', description)
+
+    return () => {
+      document.title = 'ABYSSORA - Read Manga Online'
+      setDiscoverMeta('name', 'description', 'Explore ABYSSORA, your manga reading destination. Discover manga series, browse the library, and enjoy reading your favourite stories online.')
+      setDiscoverCanonical(`${SITE_URL}/`)
+      setDiscoverMeta('property', 'og:title', 'ABYSSORA - Read Manga Online')
+      setDiscoverMeta('property', 'og:description', 'Discover manga series and enjoy reading your favourite stories online with ABYSSORA.')
+      setDiscoverMeta('property', 'og:url', `${SITE_URL}/`)
+      setDiscoverMeta('name', 'twitter:title', 'ABYSSORA - Read Manga Online')
+      setDiscoverMeta('name', 'twitter:description', 'Discover and read manga online with ABYSSORA.')
+    }
+  }, [])
 
   useEffect(() => {
     let mounted = true
