@@ -1,15 +1,4 @@
 User-agent: *
 Allow: /
 
-Disallow: /admin
-Disallow: /admin/
-Disallow: /profile
-Disallow: /library
-Disallow: /notifications
-Disallow: /login
-Disallow: /register
-Disallow: /forgot-password
-Disallow: /update-password
-Disallow: /creator/submit
-
 Sitemap: https://abyssora-ten.vercel.app/sitemap.xml
