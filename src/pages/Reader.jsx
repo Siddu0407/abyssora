@@ -611,6 +611,8 @@ export default function Reader() {
                 src={page}
                 alt={`${story.title} Chapter ${chapter} Page ${index + 1}`}
                 loading={index < 2 ? 'eager' : 'lazy'}
+                fetchPriority={index === 0 ? 'high' : index < 2 ? 'auto' : 'low'}
+                decoding="async"
                 onLoad={handlePageLoad}
                 className="mx-auto block h-auto w-full select-none"
               />
