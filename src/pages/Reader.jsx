@@ -177,9 +177,12 @@ export default function Reader() {
           return
         }
 
+        // Fetch chapter navigation metadata without downloading every chapter's
+        // page URLs. Page arrays can be large, so load them only for the
+        // chapter the reader is currently opening.
         const { data: chapters, error: chaptersError } = await supabase
           .from('chapters')
-          .select('id, chapter_number, title, pages, is_published')
+          .select('id, chapter_number, title, is_published')
           .eq('comic_id', id)
           .eq('is_published', true)
           .order('chapter_number', { ascending: true })
@@ -188,9 +191,18 @@ export default function Reader() {
 
         if (cancelled) return
 
-        const selectedChapter = (chapters || []).find(
-          (item) => Number(item.chapter_number) === chapter
-        )
+        const { data: selectedChapter, error: selectedChapterError } =
+          await supabase
+            .from('chapters')
+            .select('id, chapter_number, title, pages, is_published')
+            .eq('comic_id', id)
+            .eq('chapter_number', chapter)
+            .eq('is_published', true)
+            .maybeSingle()
+
+        if (selectedChapterError) throw selectedChapterError
+
+        if (cancelled) return
 
         setStory(comic)
         setPublishedChapters(chapters || [])
